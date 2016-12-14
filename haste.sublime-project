@@ -1,0 +1,44 @@
+{
+	"build_systems":
+	[
+		{
+			"target": "minion",
+
+			"cmd":
+			[
+				"make",
+				"-s"
+			],
+			"file_regex": "^(?:(?:  what\\(\\):  )|)(..[^:\\n]*):([0-9]+):?([0-9]+)?:? (.*)$",
+			"name": "Build haste.",
+			"working_dir": "${project_path}",
+
+			"variants":
+			[
+				{
+					"cmd": ["make", "-s", "run"],
+					"name": "Run.",
+				},
+
+				{
+					"cmd": ["make", "-s", "test"],
+					"name": "Test.",
+				},
+
+				{
+					"cmd": ["make", "-s", "benchmark"],
+					"name": "Benchmark.",
+				}
+			],
+
+			"working_dir": "${project_path}"
+		}
+	],
+	"folders":
+	[
+		{
+			"path": ".",
+			"folder_exclude_patterns": ["submodules", "build"],
+		}
+	]
+}
