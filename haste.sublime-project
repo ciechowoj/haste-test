@@ -2,8 +2,6 @@
 	"build_systems":
 	[
 		{
-			"target": "minion",
-
 			"cmd":
 			[
 				"make",
@@ -11,34 +9,63 @@
 			],
 			"file_regex": "^(?:(?:  what\\(\\):  )|)(..[^:\\n]*):([0-9]+):?([0-9]+)?:? (.*)$",
 			"name": "Build haste.",
-			"working_dir": "${project_path}",
-
+			"target": "minion",
 			"variants":
 			[
 				{
-					"cmd": ["make", "-s", "run"],
-					"name": "Run.",
+					"cmd":
+					[
+						"make",
+						"-s",
+						"run"
+					],
+					"name": "Run."
 				},
-
 				{
-					"cmd": ["make", "-s", "test"],
-					"name": "Test.",
+					"cmd":
+					[
+						"make",
+						"-s",
+						"test"
+					],
+					"name": "Test."
 				},
-
 				{
-					"cmd": ["make", "-s", "benchmark"],
-					"name": "Benchmark.",
-				}
+					"cmd":
+					[
+						"make",
+						"-s",
+						"benchmark"
+					],
+					"name": "Benchmark."
+				},
 			],
-
 			"working_dir": "${project_path}"
+		},
+
+		{
+			"cmd":
+			[
+				"make", "run", "-s"
+			],
+			"file_regex": "^(?:(?:  what\\(\\):  )|)(..[^:\\n]*):([0-9]+):?([0-9]+)?:? (.*)$",
+			"name": "Build kata.",
+			"target": "minion",
+			"working_dir": "/home/wojciech/kata"
 		}
 	],
 	"folders":
 	[
 		{
-			"path": ".",
-			"folder_exclude_patterns": ["submodules", "build"],
+			"folder_exclude_patterns":
+			[
+				"submodules",
+				"build"
+			],
+			"path": "."
+		},
+		{
+			"path": "/home/wojciech/kata"
 		}
 	]
 }

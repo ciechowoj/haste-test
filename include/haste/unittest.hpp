@@ -126,6 +126,16 @@ noinline void assert_almost_eq(T a, T b, call_site_t site = {}) {
                            site);
 }
 
+template <class Ta, class Tb>
+void assert_eq(Ta a, Tb b, call_site_t site = {}) {
+  assert_true(a == b, site);
+}
+
+template <class Ta, class Tb>
+void assert_ne(Ta a, Tb b, call_site_t site = {}) {
+  assert_false(a == b, site);
+}
+
 #undef noinline
 }
 
