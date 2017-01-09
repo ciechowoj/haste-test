@@ -1,0 +1,33 @@
+#pragma once
+#include <haste/string>
+
+namespace {
+
+class allocator {
+public:
+
+
+  void* alloc(size_t size);
+  void* realloc(size_t size, void* pointer);
+  void free(size_t size, void* pointer);
+
+  size_t capacity() const;
+  size_t usage() const;
+  string name() const;
+
+private:
+  void* _impl;
+};
+
+allocator default_allocator();
+allocator stack_allocator(size_t size, uchar* stack);
+
+
+
+
+
+
+
+
+
+}

@@ -1,0 +1,22 @@
+
+
+
+
+
+
+namespace haste {
+
+
+void set_error_handler();
+void set_warning_handler();
+
+void error(const char* message); // errors terminate execution of program
+void warning(const char* message);
+
+
+
+}
+
+
+
+

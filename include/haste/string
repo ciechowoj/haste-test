@@ -1,0 +1,81 @@
+#pragma once
+
+
+namespace haste {
+
+class bytes32 {
+public:
+  bytes32(const allocator& = default_allocator);
+  bytes32(size_t size, const allocator& = default_allocator);
+  bytes32(size_t size, uchar value, const allocator& = default_allocator);
+  bytes32(const bytes32&);
+  bytes32(bytes32&&);
+  ~bytes32();
+
+  bytes32& operator=(const bytes32&);
+  bytes32& operator=(bytes32&&);
+
+  void reset();
+  void resize(size_t size);
+  void resize(size_t size, uchar value);
+  void append(uchar);
+  void append(const bytes32&);
+  void append(size_t size, const uchar* data);
+  void insert(size_t index, size_t size, uchar);
+  void insert(size_t index, const bytes32&);
+  void insert(size_t index, size_t size, const uchar* data);
+  void remove(size_t index, size_t size);
+
+  struct range {
+
+  };
+
+  void replace(range range, size_t data_size, uchar);
+  void replace(range range, const bytes32&);
+  void replace(range range, size_t data_size, const uchar* data);
+
+
+
+  const_uchar_xptr data() const { return is_small() ? _data : dsds; }
+  uchar_xptr data() { return _data; }
+  size_t size() const { return _size; }
+
+  bool is_empty() const { }
+  bool is_small() const { }
+private:
+  const char* _data;
+  size_t _size;
+  char _buffer[16];
+};
+
+
+
+
+template <class T> class list {
+
+
+private:
+  allocator _allocator;
+  size_t _capacity;
+  size_t _size;
+  T* _data;
+};
+
+template <class T, class N> class fixed_list : list {
+public:
+  fixed_list() : list(fixed_allocator(_pool_size, _pool))
+
+
+private:
+
+  size_t _size;
+  uchar _data[sizeof(T)];
+};
+
+
+
+
+
+
+}
+
