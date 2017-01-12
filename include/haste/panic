@@ -1,0 +1,12 @@
+#pragma once
+
+namespace haste {
+
+void panic(const char* message);
+void warn(const char* message);
+
+}
+
+
+
+

@@ -1,0 +1,44 @@
+#pragma once
+
+namespace haste {
+
+using i8 = signed char;
+using i16 = signed short;
+using i32 = signed int;
+using i64 = signed long long;
+
+using u8 = unsigned char;
+using u16 = unsigned short;
+using u32 = unsigned int;
+using u64 = unsigned long long;
+
+using f32 = float;
+using f64 = double;
+
+namespace detail {
+
+template <class, class, i32 = sizeof(void*)>
+struct _native {};
+
+template <class t32, class t64>
+struct _native<t32, t64, 4> {
+  using type = t32;
+};
+
+template <class t32, class t64>
+struct _native<t32, t64, 8> {
+  using type = t64;
+};
+}
+
+using isize = detail::_native<i32, i64>::type;
+using usize = detail::_native<u32, u64>::type;
+
+constexpr usize	usize_min = 0;
+constexpr usize	usize_max = ~usize(0);
+
+
+
+
+
+}

@@ -1,7 +1,7 @@
 
 
 CXX = g++
-CXXFLAGS = -march=native -g -O2 -Wall -std=c++14
+CXXFLAGS = -march=native -g -O2 -Wall -Wextra -ansi -pedantic -std=c++14
 
 INCLUDE_DIRS = -Iinclude
 

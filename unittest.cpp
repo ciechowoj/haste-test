@@ -3,7 +3,7 @@
 #include <cstdio>
 #include <cstdlib>
 
-#include <haste/unittest.hpp>
+#include <haste/unittest>
 #include <new>
 
 namespace haste {

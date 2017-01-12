@@ -1,33 +1,31 @@
 #pragma once
-#include <haste/string>
+#include <haste/primitive>
 
-namespace {
+namespace haste {
 
 class allocator {
-public:
+ public:
+  allocator();
+  allocator(const allocator&);
+  allocator(allocator&&);
+  ~allocator();
 
+  allocator& operator=(const allocator&);
+  allocator& operator=(allocator&&);
 
-  void* alloc(size_t size);
-  void* realloc(size_t size, void* pointer);
-  void free(size_t size, void* pointer);
+  void* alloc(usize size);
+  void* realloc(usize size, void* memory);
+  void free(void* memory);
 
-  size_t capacity() const;
-  size_t usage() const;
-  string name() const;
+  usize capacity() const;
+  usize usage() const;
 
-private:
-  void* _impl;
+ private:
+  struct _impl_t;
+  static _impl_t _def;
+  _impl_t* _impl;
+
+  allocator(_impl_t* impl);
+  friend allocator default_allocator();
 };
-
-allocator default_allocator();
-allocator stack_allocator(size_t size, uchar* stack);
-
-
-
-
-
-
-
-
-
 }

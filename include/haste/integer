@@ -1,20 +1,5 @@
 #pragma once
 
 namespace haste {
-namespace detail {
-template <bool B, class True, class False>
-struct _select {
-  using type = True;
-};
 
-template <class True, class False>
-struct _select<true, True, False> {
-  using type = False;
-};
-
-template <bool C, class T, class F>
-using select = typename _select<C, T, F>::type;
-}
-
-using integer = detail::select<sizeof(void*) == sizeof(int), int, long long>;
 }

@@ -1,5 +1,6 @@
 #pragma once
 #include <haste/integer>
+#include <haste/primitive>
 
 namespace haste {
 namespace detail {
@@ -29,7 +30,7 @@ class string_view {
     _zstring(str);
   }
 
-  integer size() const { return _end - _begin; }
+  usize size() const { return _end - _begin; }
   const char* data() const { return _begin; }
 
  private:

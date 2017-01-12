@@ -1,4 +1,4 @@
-#include <haste/unittest.hpp>
+#include <haste/unittest>
 
 int main() {
 	return haste::run_all_tests() ? 0 : 1;

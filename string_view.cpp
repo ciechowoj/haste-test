@@ -1,3 +1,4 @@
+#include <haste/unittest>
 #include <haste/string_view>
 #include <cstring>
 
@@ -8,7 +9,7 @@ void string_view::_zstring(const char* str) {
   _end = _begin + std::strlen(str);
 }
 
-unittest() {
+/*unittest() {
   string_view();
   string_view("");
   string_view("foo");
@@ -19,6 +20,6 @@ unittest() {
 
   const char* _2 = nullptr;
   string_view _3(_2);
-}
+}*/
 
 }
