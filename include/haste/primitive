@@ -34,11 +34,35 @@ struct _native<t32, t64, 8> {
 using isize = detail::_native<i32, i64>::type;
 using usize = detail::_native<u32, u64>::type;
 
-constexpr usize	usize_min = 0;
-constexpr usize	usize_max = ~usize(0);
+constexpr usize usize_min = 0;
+constexpr usize usize_max = ~usize(0);
 
+namespace detail {
 
+template <class T>
+struct _remove_reference {
+  using type = T;
+};
 
+template <class T>
+struct _remove_reference<T&> {
+  using type = T;
+};
 
-
+template <class T>
+struct _remove_reference<T&&> {
+  using type = T;
+};
 }
+
+template <class T>
+using remove_reference = typename detail::_remove_reference<T>::type;
+
+template <class T>
+remove_reference<T>&& move(T&& x) {
+  return static_cast<remove_reference<T>&&>(x);
+}
+}
+
+void* operator new(unsigned long int, void*);
+void* operator new[](unsigned long int, void*);

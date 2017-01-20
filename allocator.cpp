@@ -30,6 +30,10 @@ struct allocator::_impl_t {
     if (refcount != 0) {
       panic("allocator reference count corruption");
     }
+
+    if (usage != 0) {
+      warn("memory leak");
+    }
   }
 };
 
@@ -162,7 +166,7 @@ unittest() {
   allocator1.free(memory1);
 
   allocator allocator2 = allocator1;
-  /*void* memory2 = allocator2.alloc(128);
-  allocator2.free(memory2);*/
+  void* memory2 = allocator2.alloc(128);
+  allocator2.free(memory2);
 }
 }

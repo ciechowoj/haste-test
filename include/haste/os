@@ -1,0 +1,49 @@
+#pragma once
+#include <haste/string>
+
+namespace haste {
+
+class closure_view {
+ public:
+  template <class F>
+  closure_view(F&& closure)
+      : _closure(&closure), _callback([](void* f) { (*((F*)f))(); }) {}
+
+  void operator()() {
+    _callback(_closure);
+  }
+
+ public:
+  void* _closure;
+  void (*_callback)(void*);
+};
+
+void chdir(string_view);
+void chdir(string_view, closure_view);
+
+enum class os_error {
+  success,
+  access_denied,
+  directory_unlinked,
+  out_of_memory,
+  unknown_error,
+};
+
+expected<string, os_error> getcwd();
+
+// template <class F> void chdir(string_view, F&&);
+
+struct listdir_generator {
+ public:
+  listdir_generator& begin();
+  listdir_generator& end();
+  operator string_view&();
+  void operator++();
+
+ private:
+  char _state;
+};
+
+// scandir_generator scandir(string_view path = ".");
+listdir_generator listdir(string_view path = ".");
+}

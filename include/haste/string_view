@@ -3,39 +3,5 @@
 #include <haste/primitive>
 
 namespace haste {
-namespace detail {
 
-template <class X, class Y, class T = void>
-struct _enable_if_same {};
-
-template <class X, class T>
-struct _enable_if_same<X, X, T> {
-  using type = T;
-};
-
-template <class X, class Y>
-using enable_if_same = typename _enable_if_same<X, Y>::type;
-}
-
-class string_view {
- public:
-  string_view() = default;
-  string_view(const string_view&) = default;
-  string_view(decltype(nullptr)) {}
-  template <int N>
-  string_view(const char (&str)[N]) : _begin(str), _end(str + N) {}
-
-  template <class T, typename = detail::enable_if_same<T, const char*>>
-  string_view(T str) {
-    _zstring(str);
-  }
-
-  usize size() const { return _end - _begin; }
-  const char* data() const { return _begin; }
-
- private:
-  void _zstring(const char*);
-  const char* _begin = nullptr;
-  const char* _end = nullptr;
-};
 }

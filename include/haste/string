@@ -1,88 +1,158 @@
 #pragma once
+#include <haste/primitive>
+#include <haste/expected>
 
 namespace haste {
 
+namespace detail {
+
+template <class X, class T = void>
+struct _enable_if_const_pchar {};
+
+template <class T>
+struct _enable_if_const_pchar<const char*, T> {
+  using type = T;
+};
+
+template <class X>
+using enable_if_const_pchar = typename _enable_if_const_pchar<X>::type;
+}
+
+class string;
+
+class string_view {
+ public:
+  string_view() = default;
+  string_view(const string_view&) = default;
+  string_view(const string&);
+  string_view(decltype(nullptr)) {}
+  template <int N>
+  string_view(const char (&str)[N]) : _begin(str), _end(str + N) {}
+
+  template <class T, typename = detail::enable_if_const_pchar<T>>
+  string_view(T str) {
+    _zstring(str);
+  }
+
+  usize size() const { return _end - _begin; }
+  const char* data() const { return _begin; }
+
+ private:
+  void _zstring(const char*);
+  const char* _begin = nullptr;
+  const char* _end = nullptr;
+};
+
 class allocator;
 
-typedef unsigned long long size_t;
+enum class parse_int_error {
+  no_error,
+  empty_string,
+  invalid_char,
+  underflow,
+  overflow,
+};
+
+enum class alloc_error {
+  no_error,
+  out_of_memory,
+};
+
+class string : public list<char> {
+ public:
+  string();
+  string(const allocator&);
+  string(const string&);
+  string(string&&);
+  ~string();
+
+  string(const char* begin, const char* end);
 
 
-class bytes32 {
-public:
-  bytes32();
-  bytes32(const allocator&);
-  bytes32(size_t size);
-  bytes32(size_t size, const allocator&);
-  bytes32(size_t size, char value);
-  bytes32(size_t size, char value, const allocator&);
-  bytes32(const bytes32&);
-  bytes32(bytes32&&);
-  ~bytes32();
+  string& operator=(const string&);
+  string& operator=(string&&);
 
-  bytes32& operator=(const bytes32&);
-  bytes32& operator=(bytes32&&);
+  /* void reset();
+  void resize(usize size);
+  void resize(char value, usize size);
 
-  void reset();
-  void resize(size_t size);
-  void resize(size_t size, char value);
   void append(char);
-  void append(const bytes32&);
-  void append(size_t size, const char* data);
-  void insert(size_t index, size_t size, char);
-  void insert(size_t index, const bytes32&);
-  void insert(size_t index, size_t size, const char* data);
-  void remove(size_t index, size_t size);
+  void append(const string&);
+  void append(const char* data, usize size);
 
-  struct range {
+  void insert(usize index, char, usize size);
+  void insert(usize index, const string&);
+  void insert(usize index, const char* data, usize size);
 
-  };
+  void replace(usize index0, usize size0, char c, usize size1);
+  void replace(usize index0, usize size0, const string&);
+  void replace(usize index0, usize size0, const char* data1, usize size1);
 
-  void replace(range range, size_t data_size, char);
-  void replace(range range, const bytes32&);
-  void replace(range range, size_t data_size, const char* data);
+  void remove(usize index, usize size);
 
+  string format(); */
 
+  // optional<haste::i8, parse_int_error> i8() const; // or expected ? (or
+  // validate functions?)
+  // optional<haste::i16, parse_int_error> i16() const; // or expected ? (or
+  // validate functions?)
+  // optional<haste::i32, parse_int_error> i32() const; // or expected ? (or
+  // validate functions?)
+  // optional<haste::i64, parse_int_error> i64() const; // or expected ? (or
+  // validate functions?)
+
+  // expected<haste::u8, parse_int_error> u8() const;
+  // expected<haste::u16, parse_int_error> u16() const;
+  // expected<haste::u32, parse_int_error> u32() const;
+  // expected<haste::u64, parse_int_error> u64() const;
+
+  // expected<haste::f32, parse_float_error> f32() const;
+  // expected<haste::f64, parse_float_error> f64() const;
+
+  // haste::f32 f32() const; // return NaN if cannot parse ? (a bit bad idea,
+  // someone may expect nan in normal circumstances)
+
+  string strip() &&;
+  string rstrip() &&;
+  string lstrip() &&;
+
+  generator split();
+
+  // bool startswith(string_view) const;
+  // bool endswith(string_view) const;
 
   /*const_uchar_xptr data() const { return is_small() ? _data : dsds; }
   uchar_xptr data() { return _data; }*/
-  size_t size() const { return _size; }
+  usize size() const { return _size; }
 
   // bool is_empty() const { }
-  // bool is_small() const { }
-private:
+  bool is_small() const {  }
+ private:
   const char* _data;
-  size_t _size;
-  char _buffer[16];
+  char _buffer[8];
+  usize _offset;
+  usize _size;
 };
 
-
-
-/*
-template <class T> class list {
-
-
-private:
-  allocator _allocator;
-  size_t _capacity;
-  size_t _size;
-  T* _data;
-};
-
-template <class T, class N> class fixed_list : list {
+class string_builder {
 public:
-  fixed_list() : list(fixed_allocator(_pool_size, _pool))
 
+  expected<void, alloc_error> extend();
 
-private:
-
-  size_t _size;
-  uchar _data[sizeof(T)];
+  char* data();
+  usize size();
 };
-*/
 
 
 
 
+string repeat(char c, usize n);
 
+bool operator==(string_view, string_view);
+
+struct format_proxy {
+  string operator()(...);
+};
+
+format_proxy operator"" _format(const char* s, long unsigned int);
 }
-

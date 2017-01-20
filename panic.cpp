@@ -10,7 +10,7 @@ void panic(const char* message) {
 }
 
 void warn(const char* message) {
-	fprintf(::stderr, "%s\n", message);
+	fprintf(::stderr, "warning: %s\n", message);
 }
 
 }
