@@ -1,4 +1,6 @@
 #pragma once
+#include <new>
+#include <initializer_list>
 
 namespace haste {
 
@@ -59,10 +61,17 @@ template <class T>
 using remove_reference = typename detail::_remove_reference<T>::type;
 
 template <class T>
-remove_reference<T>&& move(T&& x) {
+remove_reference<T>&& move(T&& x) noexcept {
   return static_cast<remove_reference<T>&&>(x);
 }
+
+template <class T>
+T&& forward(remove_reference<T>& x) noexcept {
+  return static_cast<T&&>(x);
 }
 
-void* operator new(unsigned long int, void*);
-void* operator new[](unsigned long int, void*);
+template <class T>
+T&& forward(remove_reference<T>&& x) noexcept {
+  return static_cast<T&&>(x);
+}
+}

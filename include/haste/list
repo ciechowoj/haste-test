@@ -1,45 +1,125 @@
 #pragma once
+#include <haste/allocator>
 
 namespace haste {
 namespace detail {
 
-class _list {
-
-
+struct allocator_storage {
+  alignas(allocator) char _data[sizeof(allocator)] = {0};
 };
-}
 
-/*class bytes {
- public:
-  bytes() = default;
-  bytes(bytes&&);
-  bytes(const bytes&, closure_view(void* dst, const void* src, usize item_size,
-                                   usize num_items));
-  bytes(usize item_size, usize size);
-  ~bytes();
+struct trivial_list {
+  trivial_list() = default;
+  trivial_list(usize, allocator&&);
+  trivial_list(usize, usize);
+  trivial_list(usize, usize, allocator&&);
+  ~trivial_list();
 
-  usize size(usize item_size) const;
+  trivial_list(trivial_list&&);
+  trivial_list(const trivial_list&);
+  trivial_list& operator=(trivial_list&&);
+  trivial_list& operator=(const trivial_list&);
 
- private:
-  char* _data = nullptr;
-  usize _unused = 0;
-  usize _offset = 0;
-  usize _size = 0;
-};*/
+  usize size() const { return _flag() >> 7 ? _size << 1 >> 1 : _flag(); }
+
+  static constexpr usize _small_size = sizeof(usize) * 3 - 1;
+  u8* _data = nullptr;
+  allocator_storage _allocator_storage;
+  usize _offset;
+  usize _size;
+
+  u8& _flag() { return _internal()[_small_size]; }
+  u8 _flag() const { return _internal()[_small_size]; }
+  bool _heap() const { return _flag() >> 7; }
+  allocator& _allocator() { return (allocator&)_allocator_storage; }
+  const allocator& _allocator() const {
+    return (const allocator&)_allocator_storage;
+  }
+
+  u8* _internal() { return (u8*)&_allocator_storage; }
+  const u8* _internal() const { return (const u8*)&_allocator_storage; }
+};
+
+struct default_list {
+  default_list(usize, usize);
+  default_list(usize, usize, allocator&&);
+
+  allocator _allocator;
+  u8* _data = nullptr;
+  usize _offset;
+  usize _size;
+};
+
+template <class T, bool = __is_trivially_copyable(T)>
+struct _basic_list {
+  using type = trivial_list;
+};
 
 template <class T>
-class list {
+struct _basic_list<T, false> {
+  using type = default_list;
+};
+
+template <class T>
+using basic_list = typename _basic_list<T>::type;
+}
+
+template <class T>
+class list : private detail::basic_list<T> {
+ private:
+  using _base = detail::basic_list<T>;
+
  public:
   list() = default;
-  list(allocator& allocator) : _list(allocator) { }
-  list(list<T>&& that) : _list(that, _move) { }
-  list(const list<T>& that) : _list(that, _copy) { }
-  ~list() : _list(del) { }
 
-  template <class... T> list(const T&... those) {
-    const T* ptrs[] = { nullptr, &those... };
+  list(list&& that) = default;
+  list(const list& that) = default;
+
+  // list& operator=(list&&);
+  // list& operator=(const list&);
+
+  list(haste::allocator allocator) : detail::basic_list<T>(sizeof(T), move(allocator)) {}
+
+  list(const std::initializer_list<T>& that)
+      : detail::basic_list<T>(that.size(), sizeof(T)) {
+    auto dst = this->data();
+    auto src = that.begin();
+    for (usize i = 0; i < that.size(); ++i) {
+      new (dst + i) T(src[i]);
+    }
+  }
+
+  list(haste::allocator allocator, const std::initializer_list<T>& that)
+      : detail::basic_list<T>(that.size(), sizeof(T), move(allocator)) {
+    auto dst = this->data();
+    auto src = that.begin();
+    for (usize i = 0; i < that.size(); ++i) {
+      new (dst + i) T(src[i]);
+    }
+  }
+
+  usize size() const { return _base::size(); }
+  T* data() { return (T*)_base::_data; }
+  const T* data() const { return (const T*)_base::_data; }
+};
+
+/*template <class T>
+class list : private detail::_erased<T> {
+ public:
+  list() = default;
+  list(allocator& allocator) : _list(allocator) {}
+  ~list() {}
 
 
+
+  list(list<T>&& that) : _list(that, _move) {}
+  list(const list<T>& that) : _list(that, _copy) {}
+
+
+  template <class... U>
+  list(haste::allocator& allocator, const U&... those) : _list(allocator) {
+    const void* ptrs[] = {nullptr, &those...};
+    _list.init(ptrs + 1, sizeof...(those), sizeof(T), _erased::copy);
   }
 
   list& operator=(list<T>&& that) {
@@ -48,29 +128,16 @@ class list {
   }
 
   list& operator=(const list<T>& that) {
-    swap(_list, _list(that.list, _copy));
+    swap(_list, _list(that.list, _erased::copy));
     return *this;
   }
 
-  const T& index(usize i) const { return data()[i]; }
-
-  const T* data() const { return begin(); }
-  usize size() const { return _list.size(sizeof(T)); }
-
-  const T* begin() const { return (const T*)_list.begin(); }
-  const T* end() const { return (const T*)_list.end(sizeof(T)); }
-
-  list clone(usize begin, usize end) const;
-  list clone(usize begin, usize end, allocator& allocator) const;
-  list slice(usize begin, usize end) const;
-  list_builder builder() const
-  list_view view(usize begin, usize end) const;
-
-  haste::allocator& allocator() const;
-
  private:
-  detail::_list _list;
-};
+  char* _data = nullptr;
+  usize _unused = 0;
+  usize _offset = 0;
+  usize _size = 0;
+};*/
 
 template <class T>
 class list_view {};

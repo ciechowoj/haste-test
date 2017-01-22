@@ -5,7 +5,7 @@ namespace haste {
 
 class allocator {
  public:
-  allocator();
+  constexpr allocator() = default;
   allocator(const allocator&);
   allocator(allocator&&);
   ~allocator();
@@ -13,19 +13,26 @@ class allocator {
   allocator& operator=(const allocator&);
   allocator& operator=(allocator&&);
 
-  void* alloc(usize size);
-  void* realloc(usize size, void* memory);
-  void free(void* memory);
+  void* alloc(usize size) const;
+  void* realloc(usize size, void* memory) const;
+  void free(void* memory) const;
 
   usize capacity() const;
   usize usage() const;
 
+  bool operator==(const allocator& that) const { return _impl == that._impl; }
+  bool operator!=(const allocator& that) const { return !(*this == that); }
+
  private:
   struct _impl_t;
-  static _impl_t _def;
-  _impl_t* _impl;
+  static _impl_t _default;
+  _impl_t* _impl = nullptr;
 
   allocator(_impl_t* impl);
-  friend allocator default_allocator();
+
+  friend allocator explicit_allocator();
 };
+
+allocator explicit_allocator();
+
 }

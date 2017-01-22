@@ -1,4 +1,5 @@
 #include <haste/primitive>
+#include <haste/unittest>
 
 namespace haste {
 
@@ -14,4 +15,5 @@ static_assert(sizeof(u64) == 8, "");
 
 static_assert(sizeof(f32) == 4, "");
 static_assert(sizeof(f64) == 8, "");
+
 }

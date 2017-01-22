@@ -6,7 +6,7 @@
 
 namespace haste {
 
-void chdir(string_view) {}
+/* void chdir(string_view) {}
 
 expected<string, os_error> getcwd() {
   string_builder builder(string_builder::default_buffer_size);
@@ -38,5 +38,5 @@ unittest() {
     listdir("empty");
 
   });
-}
+}*/
 }

@@ -18,8 +18,6 @@ class closure_view {
   void (*_callback)(void*);
 };
 
-void chdir(string_view);
-void chdir(string_view, closure_view);
 
 enum class os_error {
   success,
@@ -29,11 +27,11 @@ enum class os_error {
   unknown_error,
 };
 
-expected<string, os_error> getcwd();
+// expected<string, os_error> getcwd();
 
 // template <class F> void chdir(string_view, F&&);
 
-struct listdir_generator {
+/* struct listdir_generator {
  public:
   listdir_generator& begin();
   listdir_generator& end();
@@ -42,8 +40,8 @@ struct listdir_generator {
 
  private:
   char _state;
-};
+};*/
 
 // scandir_generator scandir(string_view path = ".");
-listdir_generator listdir(string_view path = ".");
+// listdir_generator listdir(string_view path = ".");
 }
