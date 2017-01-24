@@ -53,6 +53,28 @@ inline void delete_buffer(u8* _data, usize offset) {
   allocator.free(data);
 }
 
+inline allocator& local_allocator(trivial_list* _this) {
+  return (allocator&)_this->_allocator_storage;
+}
+
+inline const allocator& local_allocator(const trivial_list* _this) {
+  return (const allocator&)_this->_allocator_storage;
+}
+
+inline usize inplace_size(const trivial_list* _this) {
+  return (_this->_size & trivial_list::mode_mask) >>
+         trivial_list::inplace_offset;
+}
+
+inline void set_size(trivial_list* _this, usize size) {
+  _this->_size = (_this->_size & ~trivial_list::mode_mask) | size;
+}
+
+inline void set_inplace_size(trivial_list* _this, usize size) {
+  _this->_size = (_this->_size & trivial_list::inplace_mask) |
+                 (size << trivial_list::inplace_offset);
+}
+
 trivial_list::trivial_list(trivial_list&& that) {
   switch (that.mode()) {
     case small_opt:
@@ -60,9 +82,9 @@ trivial_list::trivial_list(trivial_list&& that) {
       that._size = 0;
       break;
     case has_alloc:
-      new (&_allocator_storage) allocator(move(that.local_allocator()));
+      new (&_allocator_storage) allocator(move(local_allocator(&that)));
       ::memcpy(&this->_data, &that._data, sizeof(that) - sizeof(allocator));
-      that.local_allocator().~allocator();
+      local_allocator(&that).~allocator();
       that._size = 0;
       break;
     case uses_heap:
@@ -78,7 +100,7 @@ trivial_list::trivial_list(const trivial_list& that) {
       ::memcpy(this, &that, sizeof(that));
       break;
     case has_alloc:
-      new (&_allocator_storage) allocator(that.local_allocator());
+      new (&_allocator_storage) allocator(local_allocator(&that));
       ::memcpy(&this->_data, &that._data, sizeof(that) - sizeof(allocator));
       break;
     case uses_heap:
@@ -100,17 +122,17 @@ trivial_list::trivial_list(usize list_size, usize item_size,
 
   if (allocator == haste::allocator() && num_bytes <= max_inplace) {
     set_mode(small_opt);
-    set_inplace_size(list_size);
+    set_inplace_size(this, list_size);
   } else if (allocator != haste::allocator() &&
              num_bytes <= max_inplace - sizeof(allocator)) {
     new (&_allocator_storage) haste::allocator(move(allocator));
     set_mode(has_alloc);
-    set_inplace_size(list_size);
+    set_inplace_size(this, list_size);
   } else {
     _data = create_buffer(move(allocator), num_bytes);
     _offset = 0;
     set_mode(uses_heap);
-    set_size(list_size);
+    set_size(this, list_size);
   }
 }
 
@@ -124,7 +146,7 @@ trivial_list::~trivial_list() {
     case small_opt:
       break;
     case has_alloc:
-      local_allocator().~allocator();
+      local_allocator(this).~allocator();
       break;
     case uses_heap:
       if (release(_data, _offset)) {
@@ -155,17 +177,21 @@ void trivial_list::view(void* result, usize item_size) const {
   switch (mode()) {
     case small_opt:
       ((const void**)result)[0] = this;
-      ((const void**)result)[1] = (u8*)this + inplace_size() * item_size;
+      ((const void**)result)[1] = (u8*)this + inplace_size(this) * item_size;
       break;
     case has_alloc:
       ((const void**)result)[0] = &_data;
-      ((const void**)result)[1] = (u8*)&_data + inplace_size() * item_size;
+      ((const void**)result)[1] = (u8*)&_data + inplace_size(this) * item_size;
       break;
     default:
       ((const void**)result)[0] = _data;
       ((const void**)result)[1] = (u8*)_data + (_size & mode_mask) * item_size;
       break;
   }
+}
+
+usize trivial_list::size() const {
+  return mode() == uses_heap ? _size & mode_mask : inplace_size(this);
 }
 
 void* trivial_list::data() {
@@ -208,17 +234,20 @@ trivial_list trivial_list::clone(usize item_size) const {
   }
 }
 
-trivial_list trivial_list::slice(usize begin, usize end, usize item_size) const {
+trivial_list trivial_list::slice(usize begin, usize end,
+                                 usize item_size) const {
   switch (mode()) {
     case small_opt: {
-      trivial_list result(end - begin, item_size, allocator(local_allocator()));
-      ::memcpy(&result, this, inplace_size() * item_size);
+      trivial_list result(end - begin, item_size,
+                          allocator(local_allocator(this)));
+      ::memcpy(&result, this, inplace_size(this) * item_size);
       return result;
     }
 
     case has_alloc: {
-      trivial_list result(end - begin, item_size, allocator(local_allocator()));
-      ::memcpy(&result._data, &_data, inplace_size() * item_size);
+      trivial_list result(end - begin, item_size,
+                          allocator(local_allocator(this)));
+      ::memcpy(&result._data, &_data, inplace_size(this) * item_size);
       return result;
     }
 

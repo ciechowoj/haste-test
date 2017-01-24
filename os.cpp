@@ -6,7 +6,7 @@
 
 namespace haste {
 
-expected<string, os_error> getcwd() {
+/* expected<string, os_error> getcwd() {
   auto result = list<char>::uninitialized_inplace_list();
 
   while (::getcwd(result.data(), result.size()) == NULL) {
@@ -21,7 +21,7 @@ expected<string, os_error> getcwd() {
   }
 
   return string(move(result)).rstrip_c_str();
-}
+}*/
 
 /*
 unittest() {
