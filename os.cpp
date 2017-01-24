@@ -6,12 +6,10 @@
 
 namespace haste {
 
-/* void chdir(string_view) {}
-
 expected<string, os_error> getcwd() {
-  string_builder builder(string_builder::default_buffer_size);
+  auto result = list<char>::uninitialized_inplace_list();
 
-  while (::getcwd(builder.data(), builder.size()) == NULL) {
+  while (::getcwd(result.data(), result.size()) == NULL) {
     switch (errno) {
       case EACCES: return os_error::access_denied;
       case ENOENT: return os_error::directory_unlinked;
@@ -19,12 +17,13 @@ expected<string, os_error> getcwd() {
       default: return os_error::unknown_error;
     }
 
-    builder.uninitialized_extend();
+    result = result.extend();
   }
 
-  return builder.string();
+  return string(move(result)).rstrip_c_str();
 }
 
+/*
 unittest() {
   assert_eq(getcwd().ignore(), "");
 

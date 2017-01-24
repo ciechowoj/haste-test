@@ -27,6 +27,13 @@ inline bool release(u8* data, usize offset) {
                             __ATOMIC_SEQ_CST) == 0;
 }
 
+inline usize refcount(u8* data, usize offset) {
+  usize result = 0;
+  __atomic_load((usize*)(data - sizeof(usize) - offset), &result,
+                __ATOMIC_SEQ_CST);
+  return result;
+}
+
 inline allocator& external_allocator(u8* data, usize offset) {
   return *((allocator*)(data - offset - sizeof(usize) - sizeof(allocator)));
 }
@@ -107,6 +114,11 @@ trivial_list::trivial_list(usize list_size, usize item_size,
   }
 }
 
+trivial_list::trivial_list(max_inplace_t, usize item_size,
+                           allocator&& allocator)
+    : trivial_list(max_inplace / item_size * item_size, item_size,
+                   move(allocator)) {}
+
 trivial_list::~trivial_list() {
   switch (mode()) {
     case small_opt:
@@ -123,9 +135,105 @@ trivial_list::~trivial_list() {
   }
 }
 
-trivial_list& trivial_list::operator=(trivial_list&&) { return *this; }
+trivial_list& trivial_list::operator=(trivial_list&& that) {
+  this->~trivial_list();
+  new (this) trivial_list(that);
+  return *this;
+}
 
-trivial_list& trivial_list::operator=(const trivial_list&) { return *this; }
+trivial_list& trivial_list::operator=(const trivial_list& that) {
+  trivial_list temp = that;
+  *this = move(temp);
+  return *this;
+}
+
+void trivial_list::init(const void* data, usize size) {
+  ::memcpy(this->data(), data, size);
+}
+
+void trivial_list::view(void* result, usize item_size) const {
+  switch (mode()) {
+    case small_opt:
+      ((const void**)result)[0] = this;
+      ((const void**)result)[1] = (u8*)this + inplace_size() * item_size;
+      break;
+    case has_alloc:
+      ((const void**)result)[0] = &_data;
+      ((const void**)result)[1] = (u8*)&_data + inplace_size() * item_size;
+      break;
+    default:
+      ((const void**)result)[0] = _data;
+      ((const void**)result)[1] = (u8*)_data + (_size & mode_mask) * item_size;
+      break;
+  }
+}
+
+void* trivial_list::data() {
+  switch (mode()) {
+    case small_opt:
+      return this;
+    case has_alloc:
+      return &_data;
+    default:
+      return _data;
+  }
+}
+
+trivial_list trivial_list::steal(usize item_size) {
+  switch (mode()) {
+    case small_opt:
+    case has_alloc:
+      return move(*this);
+    default:
+      if (refcount(_data, _offset) == 1) {
+        return move(*this);
+      } else {
+        return clone(item_size);
+      }
+  }
+}
+
+trivial_list trivial_list::clone(usize item_size) const {
+  switch (mode()) {
+    case small_opt:
+    case has_alloc:
+      return *this;
+    default: {
+      auto list_size = size();
+      trivial_list result(list_size, item_size,
+                          allocator(external_allocator(_data, _offset)));
+      ::memcpy(result._data, _data, list_size * item_size);
+      return result;
+    }
+  }
+}
+
+trivial_list trivial_list::slice(usize begin, usize end, usize item_size) const {
+  switch (mode()) {
+    case small_opt: {
+      trivial_list result(end - begin, item_size, allocator(local_allocator()));
+      ::memcpy(&result, this, inplace_size() * item_size);
+      return result;
+    }
+
+    case has_alloc: {
+      trivial_list result(end - begin, item_size, allocator(local_allocator()));
+      ::memcpy(&result._data, &_data, inplace_size() * item_size);
+      return result;
+    }
+
+    default: {
+      trivial_list result;
+      ::memcpy(&result, this, sizeof(result));
+      acquire(_data, _offset);
+      result._offset += begin;
+      result._size = end - begin;
+      return result;
+    }
+  }
+}
+
+const void* trivial_list::data() const { return ((trivial_list*)this)->data(); }
 
 default_list::default_list(usize list_size, usize item_size)
     : default_list(list_size, item_size, allocator()) {}
@@ -246,7 +354,7 @@ unittest("Test size method") {
   assert_eq(l7.size(), 9u);
 }
 
-unittest("Test special functions of list of primitive type.") {
+unittest("Test constructors of list of primitive type.") {
   auto l0 = list<int>();
   auto l1 = l0;
   auto l2 = move(l0);
@@ -278,5 +386,98 @@ unittest("Test special functions of list of primitive type.") {
   assert_eq(l9.size(), 0u);
   assert_eq(l10.size(), 8u);
   assert_eq(l11.size(), 8u);
+}
+
+unittest("Test assignment operators of list of primitive type.") {
+  auto l0 = list<int>();
+  auto l1 = list<int>({1});
+  auto l2 = list<int>({1, 2});
+  auto l3 = list<int>({1, 2, 3, 4});
+  auto l4 = list<int>({1, 2, 3, 4, 5, 6, 7, 8});
+  auto l5 = list<int>();
+
+  l5 = l0;
+  assert_eq(l5.size(), 0u);
+
+  l5 = l1;
+  assert_eq(l5.size(), 1u);
+
+  l5 = l2;
+  assert_eq(l5.size(), 2u);
+
+  l5 = l3;
+  assert_eq(l5.size(), 4u);
+
+  l5 = l4;
+  assert_eq(l5.size(), 8u);
+
+  l5 = list<int>();
+
+  l5 = move(l0);
+  assert_eq(l5.size(), 0u);
+
+  l5 = move(l1);
+  assert_eq(l5.size(), 1u);
+
+  l5 = move(l2);
+  assert_eq(l5.size(), 2u);
+
+  l5 = move(l3);
+  assert_eq(l5.size(), 4u);
+
+  l5 = move(l4);
+  assert_eq(l5.size(), 8u);
+}
+
+unittest() {
+  // copying const to const is refcounting (if big enough)
+  auto l0 = list<const int>({1, 2, 3, 4, 5, 6, 7, 8, 9});
+  auto l1 = list<const int>(l0);
+  assert_eq(l0.data(), l1.data());
+
+  // moving const to const is moving
+  auto l2 = list<const int>(move(l0));
+  assert_eq(l1.data(), l2.data());
+  assert_eq(l0.size(), 0u);
+
+  // copying const to non-const is cloning
+  auto l3 = list<int>(l1);
+  assert_ne(l1.data(), l3.data());
+
+  // moving const to non-const is cloning or moving if the const is singleton
+  auto l4 = list<const int>({1, 2, 3, 4, 5, 6, 7, 8, 9});
+  auto l5 = list<const int>({1, 2, 3, 4, 5, 6, 7, 8, 9});
+  auto l6 = l5;
+
+  auto l7 = list<int>(move(l4));
+  auto l8 = list<int>(move(l5));
+
+  assert_eq(l4.size(), 0u);
+  assert_eq(l5.size(), 9u);
+
+  // copying non-const to non-const is cloning
+  auto l10 = list<int>({1, 2, 3, 4, 5, 6, 7, 8, 9});
+  auto l11 = list<int>(l10);
+
+  assert_ne(l10.data(), l11.data());
+
+  // moving non-const to non-const is moving
+  auto l12 = list<int>(move(l10));
+  assert_ne(l11.data(), l12.data());
+  assert_eq(l10.size(), 0u);
+  assert_eq(l12.size(), 9u);
+
+  // copying non-const to const is cloning
+  auto l13 = list<const int>(l11);
+  assert_ne(l11.data(), l13.data());
+  assert_eq(l11.size(), 9u);
+  assert_eq(l13.size(), 9u);
+
+  // moving non-const to const is moving
+  auto l14 = list<int>({1, 2, 3, 4, 5, 6, 7, 8, 9});
+  auto l15 = list<const int>(move(l14));
+
+  assert_eq(l14.size(), 0u);
+  assert_eq(l15.size(), 9u);
 }
 }

@@ -1,7 +1,48 @@
 #pragma once
-#include <haste/primitive>
-#include <haste/expected>
+#include <haste/list>
 
 namespace haste {
 
+class string_view {
+ public:
+  string_view() = default;
+  string_view(string_view&&) = default;
+  string_view(const string_view&) = default;
+  ~string_view() = default;
+
+  string_view& operator=(string_view&&) = default;
+  string_view& operator=(const string_view&) = default;
+
+  string_view(const list_view<const char>& view) : _view(view) { }
+
+  const char* begin() const { return _view.begin(); }
+  const char* end() const { return _view.end(); }
+  const char* data() const { return _view.data(); }
+  usize size() const { return _view.size(); }
+ private:
+  list_view<const char> _view;
+};
+
+class string {
+ public:
+  string() = default;
+  string(list<char>&& that) : _list(move(that)) {}
+  string(const list<char>& that) : _list(that) {}
+  string(list<const char>&& that) : _list(move(that)) {}
+  string(const list<const char>& that) : _list(that) {}
+
+  template <usize N>
+  string(const char (&s)[N]) : _list(s, s + N - 1) {}
+
+  usize size() const { return _list.size(); }
+  const char* data() const { return _list.data(); }
+  string slice(usize begin, usize end) const { return _list.slice(begin, end); }
+  string_view view() const { return string_view(_list.view()); }
+
+  string rstrip_c_str() &&;
+  string rstrip_c_str() const&;
+
+ private:
+  list<const char> _list;
+};
 }
