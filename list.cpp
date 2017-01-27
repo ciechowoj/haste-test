@@ -581,4 +581,9 @@ unittest() {
 
   assert_eq(l5.size(), 0u);
 }
+
+unittest() {
+  panic("Here is panic!");
+}
+
 }
