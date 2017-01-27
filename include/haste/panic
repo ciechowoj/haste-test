@@ -2,7 +2,26 @@
 
 namespace haste {
 
+enum class panic_reason {
+  unknown,
+  index_error,
+};
+
 void panic(const char* message);
+void panic(panic_reason reason);
+
+inline void panic_if(bool condition, const char* reason) {
+  if (!condition) {
+    panic(reason);
+  }
+}
+
+inline void panic_if(bool condition, panic_reason reason) {
+  if (!condition) {
+    panic(reason);
+  }
+}
+
 void warn(const char* message);
 
 }

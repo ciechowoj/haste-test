@@ -16,4 +16,45 @@ static_assert(sizeof(u64) == 8, "");
 static_assert(sizeof(f32) == 4, "");
 static_assert(sizeof(f64) == 8, "");
 
+// is_iterable
+
+struct uniterable {};
+
+static_assert(!is_iterable<uniterable>, "");
+
+struct iterable {
+
+  iterable& begin();
+  iterable& end();
+  int operator*() const;
+  void operator++();
+  bool operator!=(const iterable&) const;
+
+};
+
+struct sized_iterable {
+  iterable& begin();
+  iterable& end();
+  int operator*() const;
+  void operator++();
+  bool operator!=(const iterable&) const;
+  int size() const;
+};
+
+struct unsized_iterable {
+  iterable& begin();
+  iterable& end();
+  int operator*() const;
+  void operator++();
+  bool operator!=(const iterable&) const;
+  void size() const;
+};
+
+
+static_assert(is_iterable<iterable>, "");
+static_assert(!has_size<iterable>, "");
+static_assert(has_size<sized_iterable>, "");
+static_assert(!has_size<unsized_iterable>, "");
+
+
 }

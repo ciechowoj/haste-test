@@ -74,4 +74,82 @@ template <class T>
 T&& forward(remove_reference<T>&& x) noexcept {
   return static_cast<T&&>(x);
 }
+
+namespace detail {
+
+using std::begin;
+using std::end;
+
+struct true_t {
+  constexpr operator bool() const { return true; }
+};
+
+struct false_t {
+  constexpr operator bool() const { return false; }
+};
+
+template <class T>
+constexpr auto is_iterable(int)
+    -> decltype(std::declval<T&>().begin() != std::declval<T&>().end(), void(),
+                ++std::declval<decltype(std::declval<T&>().begin())&>(),
+                void(std::declval<T&>().begin()), true_t()) {
+  return {};
+}
+
+template <class T>
+constexpr auto is_iterable(...) -> false_t {
+  return {};
+}
+
+template <class T>
+constexpr auto has_size(int)
+    -> decltype(usize(std::declval<T&>().size()), void(), true_t()) {
+  return {};
+}
+
+template <class T>
+constexpr auto has_size(...) -> false_t {
+  return {};
+}
+
+template <bool>
+struct enable_if {};
+
+template <>
+struct enable_if<true> {
+  using type = int;
+};
+}
+
+template <class T>
+constexpr bool is_iterable = detail::is_iterable<T>(0);
+
+template <class T>
+const bool has_size = detail::has_size<T>(0);
+
+template <class T>
+using enable_if_iterable = typename detail::enable_if<is_iterable<T>>::type;
+
+template <class T>
+using enable_if_sized_iterable =
+    typename detail::enable_if<is_iterable<T> && has_size<T>>::type;
+
+template <class T>
+using enable_if_unsized_iterable =
+    typename detail::enable_if<is_iterable<T> && !has_size<T>>::type;
+
+template <class X>
+const X& max(const X& x) {
+  return x;
+}
+
+template <class X>
+const X& max(const X& x, const X& y) {
+  return (x < y) ? x : y;
+}
+
+template <class X, class... Xs>
+const X& max(const X& x, const Xs&... xs) {
+  return haste::max(x, haste::max(xs...));
+}
 }
