@@ -1,0 +1,21 @@
+#pragma once
+#include <haste/primitive>
+
+namespace haste {
+
+template <class T>
+class range {
+ public:
+  range(T begin, T end) : _itr(begin), _end(end) {}
+
+  range& begin() { return *this; }
+  range& end() { return *this; }
+
+  void operator++() { ++_itr; }
+  T operator*() const { return _itr; }
+  bool operator!=(const range<T>&) const { return _itr != _end; }
+
+ private:
+  T _itr, _end;
+};
+}
