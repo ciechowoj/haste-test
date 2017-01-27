@@ -173,7 +173,7 @@ class list : private detail::basic_list<T> {
 
   template <class I>
   list(I&& iterable, enable_if_sized_iterable<I> = 0)
-      : detail::basic_list<T>(sizeof(T), allocator()) {
+      : detail::basic_list<T>(iterable.size(), sizeof(T), allocator()) {
     _base::template sized_init<T>(iterable);
   }
 

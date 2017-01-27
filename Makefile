@@ -1,5 +1,4 @@
 
-
 CXX = g++-6
 CXXFLAGS = -march=native -g -O0 -Wall -Wextra -ansi -pedantic -std=c++17
 
