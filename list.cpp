@@ -16,25 +16,25 @@ inline void reset(u8* data, allocator&& allocator) {
       haste::allocator(move(allocator));
 }
 
-inline void acquire(u8* data, usize offset) {
-  __atomic_add_fetch((usize*)(data - sizeof(usize) - offset), 1,
+inline void acquire(u8* data) {
+  __atomic_add_fetch((usize*)(data - sizeof(usize)), 1,
                      __ATOMIC_SEQ_CST);
 }
 
-inline bool release(u8* data, usize offset) {
-  return __atomic_sub_fetch((usize*)(data - sizeof(usize) - offset), 1,
+inline bool release(u8* data) {
+  return __atomic_sub_fetch((usize*)(data - sizeof(usize)), 1,
                             __ATOMIC_SEQ_CST) == 0;
 }
 
-inline usize refcount(u8* data, usize offset) {
+inline usize refcount(u8* data) {
   usize result = 0;
-  __atomic_load((usize*)(data - sizeof(usize) - offset), &result,
+  __atomic_load((usize*)(data - sizeof(usize)), &result,
                 __ATOMIC_SEQ_CST);
   return result;
 }
 
-inline allocator& external_allocator(u8* data, usize offset) {
-  return *((allocator*)(data - offset - sizeof(usize) - sizeof(allocator)));
+inline allocator& external_allocator(u8* data) {
+  return *((allocator*)(data - sizeof(usize) - sizeof(allocator)));
 }
 
 inline u8* create_buffer(allocator&& allocator, usize num_bytes) {
@@ -45,8 +45,8 @@ inline u8* create_buffer(allocator&& allocator, usize num_bytes) {
   return data + sizeof(allocator) + sizeof(usize);
 }
 
-inline void delete_buffer(u8* _data, usize offset) {
-  auto data = _data - offset - sizeof(usize) - sizeof(allocator);
+inline void delete_buffer(u8* _data) {
+  auto data = _data - sizeof(usize) - sizeof(allocator);
   haste::allocator allocator = move(*((haste::allocator*)data));
   ((haste::allocator*)data)->~allocator();
   allocator.free(data);
@@ -122,7 +122,7 @@ trivial_list::trivial_list(const trivial_list& that) {
       break;
     case uses_heap:
       ::memcpy(this, &that, sizeof(that));
-      acquire(_data, _offset);
+      acquire(_data);
       break;
   }
 }
@@ -159,8 +159,8 @@ trivial_list::~trivial_list() {
       local_allocator(this).~allocator();
       break;
     case uses_heap:
-      if (release(_data, _offset)) {
-        delete_buffer(_data, _offset);
+      if (release(_data)) {
+        delete_buffer(_data);
       }
 
       break;
@@ -244,7 +244,7 @@ trivial_list trivial_list::steal(usize item_size) {
     case has_alloc:
       return move(*this);
     default:
-      if (refcount(_data, _offset) == 1) {
+      if (refcount(_data) == 1) {
         return move(*this);
       } else {
         return clone(item_size);
@@ -260,7 +260,7 @@ trivial_list trivial_list::clone(usize item_size) const {
     default: {
       auto list_size = size();
       trivial_list result(list_size, item_size,
-                          haste::allocator(external_allocator(_data, _offset)));
+                          haste::allocator(external_allocator(_data)));
       ::memcpy(result._data, _data, list_size * item_size);
       return result;
     }
@@ -288,7 +288,7 @@ trivial_list trivial_list::slice(usize begin, usize end,
     default: {
       trivial_list result;
       ::memcpy(&result, this, sizeof(result));
-      acquire(_data, _offset);
+      acquire(_data);
       result._offset += begin;
       result._size = end - begin;
       return result;
@@ -307,7 +307,7 @@ haste::allocator trivial_list::allocator() const {
       return local_allocator(this);
 
     default:
-      return external_allocator(_data, _offset);
+      return external_allocator(_data);
   }
 }
 
@@ -323,8 +323,8 @@ default_list::default_list(usize list_size, usize item_size,
 }
 
 default_list::~default_list() {
-  if (_data && release(_data, _offset)) {
-    delete_buffer(_data, _offset);
+  if (_data && release(_data)) {
+    delete_buffer(_data);
   }
 }
 }
@@ -580,10 +580,6 @@ unittest() {
   auto l5 = l2.slice(1, 1);
 
   assert_eq(l5.size(), 0u);
-}
-
-unittest() {
-  panic("Here is panic!");
 }
 
 }
