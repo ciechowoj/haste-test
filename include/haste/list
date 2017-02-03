@@ -14,45 +14,11 @@ struct trivial_list {
   trivial_list(const trivial_list&);
   trivial_list(usize, allocator&&);
   trivial_list(usize, usize, allocator&&);
+  trivial_list(const void*, usize, usize, allocator&&);
   ~trivial_list();
 
   trivial_list& operator=(trivial_list&&);
   trivial_list& operator=(const trivial_list&);
-
-  template <class T>
-  void init(const T* begin, const T* end) {
-    init(begin, (end - begin) * sizeof(T));
-  }
-
-  template <class T, class I>
-  void unsized_init(I&& iterable) {
-    usize size = 0;
-    usize capacity = this->size();
-    T* data = (T*)this->data();
-
-    for (auto&& x : iterable) {
-      if (capacity == size) {
-        capacity = expand(size, sizeof(T));
-        data = (T*)this->data();
-      }
-
-      new (data + size) T(x);
-      ++size;
-    }
-
-    shrink(size, sizeof(T));
-  }
-
-  template <class T, class I>
-  void sized_init(I&& iterable) {
-    usize itr = 0;
-    T* data = (T*)this->data();
-
-    for (auto&& x : iterable) {
-      new (data + itr) T(x);
-      ++itr;
-    }
-  }
 
   template <class T>
   void deinit() {}
@@ -81,10 +47,11 @@ struct trivial_list {
 
 struct default_list {
   default_list() = default;
-  default_list(trivial_list&&);
-  default_list(const trivial_list&);
-  default_list(usize, usize);
+  default_list(default_list&&);
+  default_list(const default_list&);
+  default_list(usize, allocator&&);
   default_list(usize, usize, allocator&&);
+  default_list(const void*, usize, usize, allocator&&);
   ~default_list();
 
   template <class T>
@@ -161,34 +128,25 @@ class list : private detail::basic_list<T> {
   list(haste::allocator allocator)
       : detail::basic_list<T>(0, sizeof(T), move(allocator)) {}
 
-  list(const std::initializer_list<T>& that)
-      : detail::basic_list<T>(that.size(), sizeof(T), allocator()) {
-    _base::init(that.begin(), that.end());
-  }
+  list(const std::initializer_list<T>& that) : list(that, 0) {}
 
-  list(haste::allocator allocator, const std::initializer_list<T>& that)
-      : detail::basic_list<T>(that.size(), sizeof(T), move(allocator)) {
-    _base::init(that.begin(), that.end());
-  }
+  list(const std::initializer_list<T>& that, haste::allocator allocator)
+      : detail::basic_list<T>(&*that.begin(), that.size(), sizeof(T),
+                              move(allocator)) {}
 
   template <class I>
   list(I&& iterable, enable_if_sized_iterable<I> = 0)
-      : detail::basic_list<T>(iterable.size(), sizeof(T), allocator()) {
-    _base::template sized_init<T>(iterable);
-  }
+      : detail::basic_list<T>(iterable.size(), sizeof(T), allocator()) {}
 
   template <class I>
   list(I&& iterable, enable_if_unsized_iterable<I> = 0)
       : detail::basic_list<T>(sizeof(T), allocator()) {
-    _base::template unsized_init<T>(iterable);
+    // _base::template unsized_init<T>(iterable);
   }
 
   ~list() { _base::template deinit<T>(); }
 
-  list& operator=(list&& that) {
-    _base::operator=(move(that));
-    return *this;
-  }
+  list& operator=(list&& that) { return _base::operator=(move(that)), *this; }
 
   list& operator=(const list& that) {
     _base::operator=(that);
@@ -227,9 +185,8 @@ class list<const T> : private detail::basic_list<T> {
       : detail::basic_list<T>(sizeof(T), move(allocator)) {}
 
   list(const std::initializer_list<T>& that)
-      : detail::basic_list<T>(that.size(), sizeof(T), allocator()) {
-    _base::init(that.begin(), that.end());
-  }
+      : detail::basic_list<T>(&*that.begin(), that.size(), sizeof(T),
+                              allocator()) {}
 
   list(haste::allocator allocator, const std::initializer_list<T>& that)
       : detail::basic_list<T>(that.size(), sizeof(T), move(allocator)) {
@@ -237,9 +194,7 @@ class list<const T> : private detail::basic_list<T> {
   }
 
   list(const T* begin, const T* end)
-      : detail::basic_list<T>(end - begin, sizeof(T), allocator()) {
-    _base::init(begin, end);
-  }
+      : detail::basic_list<T>(begin, end - begin, sizeof(T), allocator()) {}
 
   ~list() { _base::template deinit<T>(); }
 

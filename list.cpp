@@ -17,8 +17,7 @@ inline void reset(u8* data, allocator&& allocator) {
 }
 
 inline void acquire(u8* data) {
-  __atomic_add_fetch((usize*)(data - sizeof(usize)), 1,
-                     __ATOMIC_SEQ_CST);
+  __atomic_add_fetch((usize*)(data - sizeof(usize)), 1, __ATOMIC_SEQ_CST);
 }
 
 inline bool release(u8* data) {
@@ -28,8 +27,7 @@ inline bool release(u8* data) {
 
 inline usize refcount(u8* data) {
   usize result = 0;
-  __atomic_load((usize*)(data - sizeof(usize)), &result,
-                __ATOMIC_SEQ_CST);
+  __atomic_load((usize*)(data - sizeof(usize)), &result, __ATOMIC_SEQ_CST);
   return result;
 }
 
@@ -100,7 +98,8 @@ trivial_list::trivial_list(trivial_list&& that) {
       break;
     case has_alloc:
       new (&_allocator_storage) haste::allocator(move(local_allocator(&that)));
-      ::memcpy(&this->_data, &that._data, sizeof(that) - sizeof(haste::allocator));
+      ::memcpy(&this->_data, &that._data,
+               sizeof(that) - sizeof(haste::allocator));
       local_allocator(&that).~allocator();
       that._size = 0;
       break;
@@ -118,7 +117,8 @@ trivial_list::trivial_list(const trivial_list& that) {
       break;
     case has_alloc:
       new (&_allocator_storage) haste::allocator(local_allocator(&that));
-      ::memcpy(&this->_data, &that._data, sizeof(that) - sizeof(haste::allocator));
+      ::memcpy(&this->_data, &that._data,
+               sizeof(that) - sizeof(haste::allocator));
       break;
     case uses_heap:
       ::memcpy(this, &that, sizeof(that));
@@ -126,6 +126,10 @@ trivial_list::trivial_list(const trivial_list& that) {
       break;
   }
 }
+
+trivial_list::trivial_list(usize item_size, haste::allocator&& allocator)
+    : trivial_list(max_inplace / item_size * item_size, item_size,
+                   move(allocator)) {}
 
 trivial_list::trivial_list(usize list_size, usize item_size,
                            haste::allocator&& allocator) {
@@ -147,9 +151,11 @@ trivial_list::trivial_list(usize list_size, usize item_size,
   }
 }
 
-trivial_list::trivial_list(usize item_size, haste::allocator&& allocator)
-    : trivial_list(max_inplace / item_size * item_size, item_size,
-                   move(allocator)) {}
+trivial_list::trivial_list(const void* data, usize list_size, usize item_size,
+                           haste::allocator&& allocator)
+    : trivial_list(list_size, item_size, move(allocator)) {
+  ::memcpy(this->data(), data, list_size * item_size);
+}
 
 trivial_list::~trivial_list() {
   switch (mode(this)) {
@@ -193,7 +199,8 @@ usize trivial_list::expand(usize capacity, usize item_size) {
 
 void trivial_list::shrink(usize list_size, usize item_size) {
   if (this->size() != list_size) {
-    trivial_list temp(list_size, item_size, haste::allocator(this->allocator()));
+    trivial_list temp(list_size, item_size,
+                      haste::allocator(this->allocator()));
     ::memcpy(temp.data(), this->data(), list_size * item_size);
     swap(temp);
   }
@@ -311,9 +318,6 @@ haste::allocator trivial_list::allocator() const {
   }
 }
 
-default_list::default_list(usize list_size, usize item_size)
-    : default_list(list_size, item_size, allocator()) {}
-
 default_list::default_list(usize list_size, usize item_size,
                            allocator&& allocator) {
   auto num_bytes = list_size * item_size;
@@ -364,28 +368,28 @@ unittest("Create lists of different lengths with default no allocator.") {
 
 unittest("Create lists of different lengths with default allocator.") {
   auto l0 = list<int>(allocator());
-  auto l1 = list<int>(allocator(), {1});
-  auto l2 = list<int>(allocator(), {1, 2});
-  auto l3 = list<int>(allocator(), {1, 2, 3});
-  auto l4 = list<int>(allocator(), {1, 2, 3, 4});
-  auto l5 = list<int>(allocator(), {1, 2, 3, 4, 5});
-  auto l6 = list<int>(allocator(), {1, 2, 3, 4, 5, 6});
-  auto l7 = list<int>(allocator(), {1, 2, 3, 4, 5, 6, 7});
-  auto l8 = list<int>(allocator(), {1, 2, 3, 4, 5, 6, 7, 8});
-  auto l9 = list<int>(allocator(), {1, 2, 3, 4, 5, 6, 7, 8, 9});
+  auto l1 = list<int>({1}, allocator());
+  auto l2 = list<int>({1, 2}, allocator());
+  auto l3 = list<int>({1, 2, 3}, allocator());
+  auto l4 = list<int>({1, 2, 3, 4}, allocator());
+  auto l5 = list<int>({1, 2, 3, 4, 5}, allocator());
+  auto l6 = list<int>({1, 2, 3, 4, 5, 6}, allocator());
+  auto l7 = list<int>({1, 2, 3, 4, 5, 6, 7}, allocator());
+  auto l8 = list<int>({1, 2, 3, 4, 5, 6, 7, 8}, allocator());
+  auto l9 = list<int>({1, 2, 3, 4, 5, 6, 7, 8, 9}, allocator());
 }
 
 unittest("Create lists of different lengths with explicit allocator.") {
   auto l0 = list<int>(explicit_allocator());
-  auto l1 = list<int>(explicit_allocator(), {1});
-  auto l2 = list<int>(explicit_allocator(), {1, 2});
-  auto l3 = list<int>(explicit_allocator(), {1, 2, 3});
-  auto l4 = list<int>(explicit_allocator(), {1, 2, 3, 4});
-  auto l5 = list<int>(explicit_allocator(), {1, 2, 3, 4, 5});
-  auto l6 = list<int>(explicit_allocator(), {1, 2, 3, 4, 5, 6});
-  auto l7 = list<int>(explicit_allocator(), {1, 2, 3, 4, 5, 6, 7});
-  auto l8 = list<int>(explicit_allocator(), {1, 2, 3, 4, 5, 6, 7, 8});
-  auto l9 = list<int>(explicit_allocator(), {1, 2, 3, 4, 5, 6, 7, 8, 9});
+  auto l1 = list<int>({1}, explicit_allocator());
+  auto l2 = list<int>({1, 2}, explicit_allocator());
+  auto l3 = list<int>({1, 2, 3}, explicit_allocator());
+  auto l4 = list<int>({1, 2, 3, 4}, explicit_allocator());
+  auto l5 = list<int>({1, 2, 3, 4, 5}, explicit_allocator());
+  auto l6 = list<int>({1, 2, 3, 4, 5, 6}, explicit_allocator());
+  auto l7 = list<int>({1, 2, 3, 4, 5, 6, 7}, explicit_allocator());
+  auto l8 = list<int>({1, 2, 3, 4, 5, 6, 7, 8}, explicit_allocator());
+  auto l9 = list<int>({1, 2, 3, 4, 5, 6, 7, 8, 9}, explicit_allocator());
 }
 
 unittest("Test different syntaxes for list initialization.") {
@@ -447,7 +451,7 @@ unittest("Test constructors of list of primitive type.") {
   assert_eq(l4.size(), 1u);
   assert_eq(l5.size(), 1u);
 
-  auto l6 = list<int>(explicit_allocator(), {1, 2});
+  auto l6 = list<int>({1, 2}, explicit_allocator());
   auto l7 = l6;
   auto l8 = move(l6);
 
@@ -455,7 +459,7 @@ unittest("Test constructors of list of primitive type.") {
   assert_eq(l7.size(), 2u);
   assert_eq(l8.size(), 2u);
 
-  auto l9 = list<int>(explicit_allocator(), {1, 2, 3, 4, 5, 6, 7, 8});
+  auto l9 = list<int>({1, 2, 3, 4, 5, 6, 7, 8}, explicit_allocator());
   auto l10 = l9;
   auto l11 = move(l9);
 
@@ -581,5 +585,4 @@ unittest() {
 
   assert_eq(l5.size(), 0u);
 }
-
 }

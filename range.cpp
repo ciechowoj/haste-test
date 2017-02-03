@@ -17,5 +17,4 @@ unittest() {
   }
 }
 
-unittest() { assert_eq(list<int>({0}), list<int>(range<int>(0, 1))); }
 }

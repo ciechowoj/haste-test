@@ -152,4 +152,15 @@ template <class X, class... Xs>
 const X& max(const X& x, const Xs&... xs) {
   return haste::max(x, haste::max(xs...));
 }
+
+
+//
+// enable_if_input_range
+// enable_if_forward_range
+// enable_if_bidirectional_range
+// enable_if_random_access_range
+// enable_if_continuous_range
+//
+
+
 }
