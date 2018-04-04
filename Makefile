@@ -37,22 +37,15 @@ build/%.o: %.cpp build/%.d | build
 	$(CXX) -c $(DEPENDENCY_FLAGS) $(CXXFLAGS) $< -o $@
 	$(DEPENDENCY_POST)
 
-build/backward.o: backward-cpp/backward.cpp build/backward.d | build
-	$(CXX) -c $(DEPENDENCY_FLAGS) $(CXXFLAGS) backward-cpp/backward.cpp -o build/backward.o
-	$(DEPENDENCY_POST)
-
 build/%.ut.o: %.cpp build/%.d | build
 	$(CXX) -c $(DEPENDENCY_FLAGS) $(CXXFLAGS) $< -o $@
 	$(DEPENDENCY_POST)
 
-build/backward.ut.o: backward-cpp/backward.cpp | build
-	$(CXX) -c $(CXXFLAGS) -DBACKWARD_HAS_DW=1 backward-cpp/backward.cpp -o build/backward.ut.o
-
-build/libhaste.a: $(OBJECT_FILES) build/backward.o Makefile
+build/libhaste.a: $(OBJECT_FILES) Makefile
 	ar rcs build/libhaste.a $(OBJECT_FILES)
 
-build/test.bin: $(OBJECT_FILES_UT) build/backward.ut.o build/test.o Makefile
-	$(CXX) -g $(OBJECT_FILES_UT) build/backward.ut.o build/test.o -ldw -o build/test.bin
+build/test.bin: $(OBJECT_FILES_UT) build/test.o Makefile
+	$(CXX) -g $(OBJECT_FILES_UT) build/test.o -ldw -o build/test.bin
 
 -include $(OBJECT_FILES:build/%.o=build/%.d)
 

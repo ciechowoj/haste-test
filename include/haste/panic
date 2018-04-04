@@ -7,7 +7,7 @@ enum class panic_reason {
   index_error,
 };
 
-void panic(const char* message);
+[[noreturn]] void panic(const char* message);
 void panic(panic_reason reason);
 
 inline void panic_if(bool condition, const char* reason) {

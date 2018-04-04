@@ -38,15 +38,16 @@
 						"benchmark"
 					],
 					"name": "Benchmark."
-				},
+				}
 			],
 			"working_dir": "${project_path}"
 		},
-
 		{
 			"cmd":
 			[
-				"make", "run", "-s"
+				"make",
+				"run",
+				"-s"
 			],
 			"file_regex": "^(?:(?:  what\\(\\):  )|)(..[^:\\n]*):([0-9]+):?([0-9]+)?:? (.*)$",
 			"name": "Build kata.",
@@ -63,9 +64,6 @@
 				"build"
 			],
 			"path": "."
-		},
-		{
-			"path": "/home/wojciech/kata"
 		}
 	]
 }

@@ -1,0 +1,17 @@
+#pragma once
+#include <haste/ndarray>
+#include <haste/string>
+
+namespace haste::nd {
+
+
+
+
+array load_image(string path);
+
+void save_image(string path, array image);
+
+
+
+
+}

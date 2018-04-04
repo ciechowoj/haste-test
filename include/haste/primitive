@@ -1,5 +1,4 @@
 #pragma once
-#include <initializer_list>
 #include <new>
 
 namespace haste {
@@ -161,6 +160,5 @@ const X& max(const X& x, const Xs&... xs) {
 // enable_if_random_access_range
 // enable_if_continuous_range
 //
-
 
 }

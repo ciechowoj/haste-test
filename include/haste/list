@@ -240,6 +240,10 @@ list<T>::list(const list<const T>& that)
 template <class T>
 class list_builder {};
 
+template <class T> class ilist : public list<const T> {
+
+};
+
 template <class A, class B>
 bool operator==(const list<A>& a, const list<B>& b) {
   auto a_size = a.size();
