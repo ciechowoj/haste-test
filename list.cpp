@@ -47,7 +47,7 @@ inline void delete_buffer(u8* _data) {
   auto data = _data - sizeof(usize) - sizeof(allocator);
   haste::allocator allocator = move(*((haste::allocator*)data));
   ((haste::allocator*)data)->~allocator();
-  allocator.free(data);
+  allocator.free(0, data);
 }
 
 static constexpr usize mode_offset = sizeof(usize) * 8 - 2;

@@ -15,8 +15,9 @@ class allocator {
 
   void* alloc(usize size) const;
   void* realloc(usize size, void* memory) const;
-  void free(void* memory) const;
+  void free(usize size, void* memory) const;
 
+  bool internal() const;
   usize capacity() const;
   usize usage() const;
 

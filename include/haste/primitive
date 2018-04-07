@@ -1,5 +1,6 @@
 #pragma once
 #include <new>
+#include <initializer_list>
 
 namespace haste {
 
@@ -118,6 +119,16 @@ template <>
 struct enable_if<true> {
   using type = int;
 };
+
+template <class X, class Y>
+struct enable_if_same {};
+
+template <class X>
+struct enable_if_same<X, X> {
+  using type = int;
+};
+
+
 }
 
 template <class T>
@@ -137,6 +148,10 @@ template <class T>
 using enable_if_unsized_iterable =
     typename detail::enable_if<is_iterable<T> && !has_size<T>>::type;
 
+template <class... X>
+using enable_if_same =
+    typename detail::enable_if_same<X...>::type;
+
 template <class X>
 const X& max(const X& x) {
   return x;
@@ -151,6 +166,9 @@ template <class X, class... Xs>
 const X& max(const X& x, const Xs&... xs) {
   return haste::max(x, haste::max(xs...));
 }
+
+
+
 
 
 //

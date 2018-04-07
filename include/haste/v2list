@@ -1,0 +1,98 @@
+#pragma once
+#include <haste/allocator>
+
+namespace haste::v2 {
+
+namespace detail {
+
+struct ilist {
+  void* _data = nullptr;
+  usize _size = 0;
+
+  ~ilist();
+  void _alloc(usize);
+  void _alloc(allocator, usize);
+  void _copy(usize, const ilist&, void (*)(void*, const void*, usize));
+};
+
+template <class X, class... Xs>
+struct Head { using type = X; };
+
+template <class X>
+struct Head<X> { using type = X; };
+
+template <class T, class X, class... Xs>
+struct Emplace {
+  static void emplace(void* data, usize i, const X& x, const Xs&... xs) {
+    new ((T*)data + i) T(x);
+    Emplace<T, Xs...>::emplace(data, i + 1, xs...);
+  }
+};
+
+template <class T, class X>
+struct Emplace<T, X> {
+  static void emplace(void* data, usize i, const X& x) {
+    new ((T*)data + i) T(x);
+  }
+};
+
+}
+
+template <class... Xs>
+using Head = typename detail::Head<Xs...>::type;
+
+template <class X, class... Xs>
+constexpr bool Same = Same<X, Head<Xs...>> && Same<Xs...>;
+
+template <class X>
+constexpr bool Same<X> = true;
+
+template <class X>
+constexpr bool Same<X, X> = true;
+
+template <class X, class Y>
+constexpr bool Same<X, Y> = false;
+
+template <class T> class ilist : private detail::ilist {
+  public:
+    ilist() = default;
+
+    ilist(const ilist& that) {
+      _copy(sizeof(T), that, [](void* dst, const void* src, usize size) {
+        for (usize i = 0; i < size; ++i) {
+          new ((T*)dst + i) T(*((T*)src));
+        }
+      });
+    }
+
+    ilist(ilist&& that) {
+      _data = that._data;
+      _size = that._size;
+      that = ilist();
+    }
+
+    template <class... X> ilist(const X&... x) {
+      static_assert(Same<T, X...>, "All types in the initializer list should be the same.");
+      _size = sizeof...(X);
+      _alloc(sizeof(T));
+      detail::Emplace<T, X...>::emplace(_data, 0, x...);
+    }
+
+    ilist& operator=(const ilist& that) {
+      return *this = std::move(ilist(that));
+    }
+
+    ilist& operator=(ilist&& that) {
+      std::swap(that._data, _data);
+      std::swap(that._size, _size);
+      return *this;
+    }
+
+    const T& operator[](usize i) const { return data()[i]; }
+    const T* data() const { return (const T*)_data; }
+    usize size() const { return _size; }
+};
+
+template <class... X> ilist(const X&... x) -> ilist<Head<X...>>;
+
+}

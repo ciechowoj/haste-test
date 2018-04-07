@@ -63,6 +63,7 @@ struct allocator::_impl_t {
   usize refcount = 0;
   usize capacity = 0;
   usize usage = 0;
+  const bool internal = false;
 
   void acquire() { __atomic_add_fetch(&refcount, 1, __ATOMIC_SEQ_CST); }
   bool release() {
@@ -133,9 +134,14 @@ void* allocator::realloc(usize size, void* memory) const {
   return impl->realloc(impl, size, memory);
 }
 
-void allocator::free(void* memory) const {
+void allocator::free(usize, void* memory) const {
   auto impl = _impl ? _impl : &_default;
   impl->free(impl, memory);
+}
+
+bool allocator::internal() const {
+  auto impl = _impl ? _impl : &_default;
+  return impl->internal;
 }
 
 usize allocator::capacity() const {
@@ -166,11 +172,11 @@ unittest("Default allocator shouldn't crash.") {
   allocator allocator1 = allocator();
 
   void* memory1 = allocator1.alloc(1024);
-  allocator1.free(memory1);
+  allocator1.free(1024, memory1);
 
   allocator allocator2 = allocator1;
   void* memory2 = allocator2.alloc(128);
-  allocator2.free(memory2);
+  allocator2.free(128, memory2);
 }
 
 unittest("Default allocator should be represented as zeros.") {

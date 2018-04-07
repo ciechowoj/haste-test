@@ -1,12 +1,12 @@
 #pragma once
-#include <haste/list>
+#include <haste/v2list>
 #include <haste/string>
 
 namespace haste::nd {
 
 enum class dtype { i8, i16, i32, i64, u8, u16, u32, u64, f32, f64 };
 
-struct shape {
+struct shape : public v2::ilist<usize> {
   template <class... T> shape(T... d) {
     _data = { usize(d)... };
   }
@@ -43,12 +43,15 @@ public:
   usize nbytes() const;
 
 
+  array reshape(ilist<usize> shape);
+
 private:
   char _impl[64];
 };
 
 array zeros();
 array empty(nd::shape shape, nd::dtype dtype);
+
 
 template <class T> struct array_view {
 public:
