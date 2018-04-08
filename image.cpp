@@ -105,9 +105,9 @@ ndarray load_image(string path) {
   return result;
 }
 
-/*unittest() {
+unittest() {
   auto image = load_image("2x2.png");
   assert_eq(ilist(2, 2, 3), image.shape());
-}*/
+}
 
 }
