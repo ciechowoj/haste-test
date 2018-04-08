@@ -1,25 +1,28 @@
 #pragma once
 #include <haste/allocator>
+#include <haste/meta>
 
 namespace haste::v2 {
 
 namespace detail {
 
-struct ilist {
+struct list {
   void* _data = nullptr;
   usize _size = 0;
 
-  ~ilist();
+  ~list();
   void _alloc(usize);
   void _alloc(allocator, usize);
-  void _copy(usize, const ilist&, void (*)(void*, const void*, usize));
+  void _copy(usize, const list&, void (*)(void*, const void*, usize));
+  void _icopy(usize, const list&, void (*)(void*, const void*, usize));
+  void _icopy(usize, usize, const void*, void (*)(void*, const void*, usize));
+
+  template <class T> static void _init(void* dst, const void* src, usize size) {
+    for (usize i = 0; i < size; ++i) {
+      new ((T*)dst + i) T(*((T*)src + i));
+    }
+  }
 };
-
-template <class X, class... Xs>
-struct Head { using type = X; };
-
-template <class X>
-struct Head<X> { using type = X; };
 
 template <class T, class X, class... Xs>
 struct Emplace {
@@ -38,61 +41,212 @@ struct Emplace<T, X> {
 
 }
 
-template <class... Xs>
-using Head = typename detail::Head<Xs...>::type;
+template <class T> class list;
+template <class T> class ilist;
 
-template <class X, class... Xs>
-constexpr bool Same = Same<X, Head<Xs...>> && Same<Xs...>;
+template <class T> class ilist_view {
+public:
+  ilist_view() = default;
+  ilist_view(const ilist_view& that) = default;
+  ilist_view(ilist_view&& that) = default;
+  ilist_view(const ilist<T>& list)
+    : ilist_view(list, 0, list.size()) { }
+  ~ilist_view() = default;
 
-template <class X>
-constexpr bool Same<X> = true;
+  const T& operator[](usize i) const { return _begin[i]; }
+  const T* data() const { return _begin; }
+  usize size() const { return _end - _begin; }
+private:
+  ilist<T> _list;
+  const T* _begin = nullptr;
+  const T* _end = nullptr;
 
-template <class X>
-constexpr bool Same<X, X> = true;
+  ilist_view(const ilist<T>& list, usize begin, usize end) {
+    _list = list;
+    _begin = list.data() + begin;
+    _end = list.data() + end;
+  }
 
-template <class X, class Y>
-constexpr bool Same<X, Y> = false;
-
-template <class T> class ilist : private detail::ilist {
-  public:
-    ilist() = default;
-
-    ilist(const ilist& that) {
-      _copy(sizeof(T), that, [](void* dst, const void* src, usize size) {
-        for (usize i = 0; i < size; ++i) {
-          new ((T*)dst + i) T(*((T*)src));
-        }
-      });
-    }
-
-    ilist(ilist&& that) {
-      _data = that._data;
-      _size = that._size;
-      that = ilist();
-    }
-
-    template <class... X> ilist(const X&... x) {
-      static_assert(Same<T, X...>, "All types in the initializer list should be the same.");
-      _size = sizeof...(X);
-      _alloc(sizeof(T));
-      detail::Emplace<T, X...>::emplace(_data, 0, x...);
-    }
-
-    ilist& operator=(const ilist& that) {
-      return *this = std::move(ilist(that));
-    }
-
-    ilist& operator=(ilist&& that) {
-      std::swap(that._data, _data);
-      std::swap(that._size, _size);
-      return *this;
-    }
-
-    const T& operator[](usize i) const { return data()[i]; }
-    const T* data() const { return (const T*)_data; }
-    usize size() const { return _size; }
+  friend class ilist<T>;
 };
 
+template <class T> class list : private detail::list {
+public:
+  list() = default;
+
+  list(const list& that) {
+    _copy(sizeof(T), that, _init<T>);
+  }
+
+  list(list&& that) {
+    _data = that._data;
+    _size = that._size;
+    that._data = nullptr;
+    that._size = 0;
+  }
+
+  template <class... X> explicit list(const X&... x) {
+    static_assert(Same<T, X...>, "All types in the initializer list should be the same.");
+    _size = sizeof...(X);
+    _alloc(sizeof(T));
+    detail::Emplace<T, X...>::emplace(_data, 0, x...);
+  }
+
+  list(usize size, const T* data) {
+    _copy(sizeof(T), size, data, _init<T>);
+  }
+
+  list& operator=(const list& that) {
+    return *this = std::move(list(that));
+  }
+
+  list& operator=(list&& that) {
+    std::swap(that._data, _data);
+    std::swap(that._size, _size);
+    return *this;
+  }
+
+  bool operator==(const list& that) const {
+    if (size() != that.size()) {
+      return false;
+    }
+
+    for (usize i = 0; i < _size; ++i) {
+      if ((*this)[i] == that[i]) {
+        continue;
+      }
+
+      return false;
+    }
+
+    return true;
+  }
+
+  T& operator[](usize i) { return data()[i]; }
+  const T& operator[](usize i) const { return data()[i]; }
+  T* data() { return (T*)_data; }
+  const T* data() const { return (const T*)_data; }
+  usize size() const { return _size; }
+
+  v2::ilist<T> ilist() const&;
+  v2::ilist<T> ilist() &&;
+
+  static list<T> empty(usize size) {
+    list<T> result;
+    result._size = size;
+    result._alloc(sizeof(T));
+    return result;
+  }
+};
+
+template <class T> class ilist : private detail::list {
+public:
+  ilist() = default;
+
+  ilist(const ilist& that) {
+    _icopy(sizeof(T), that, _init<T>);
+  }
+
+  ilist(ilist&& that) {
+    _data = that._data;
+    _size = that._size;
+    that._data = nullptr;
+    that._size = 0;
+  }
+
+  template <class... X> explicit ilist(const X&... x) {
+    static_assert(Same<T, X...>, "All types in the initializer list should be the same.");
+    _size = sizeof...(X);
+    _alloc(sizeof(T));
+    detail::Emplace<T, X...>::emplace(_data, 0, x...);
+  }
+
+  ilist(usize size, const T* data) {
+    _icopy(sizeof(T), size, data, _init<T>);
+  }
+
+  ilist& operator=(const ilist& that) {
+    return *this = std::move(ilist(that));
+  }
+
+  ilist& operator=(ilist&& that) {
+    std::swap(that._data, _data);
+    std::swap(that._size, _size);
+    return *this;
+  }
+
+  bool operator==(const ilist& that) const {
+    if (size() != that.size()) {
+      return false;
+    }
+
+    for (usize i = 0; i < _size; ++i) {
+      if ((*this)[i] == that[i]) {
+        continue;
+      }
+
+      return false;
+    }
+
+    return true;
+  }
+
+  const T& operator[](usize i) const { return data()[i]; }
+  const T* data() const { return (const T*)_data; }
+  usize size() const { return _size; }
+
+  ilist_view<T> slice() const {
+    return ilist_view<T>(*this, 0, size());
+  }
+
+  ilist_view<T> slice(usize begin) const {
+    return ilist_view<T>(*this, begin, size());
+  }
+
+  friend class v2::list<T>;
+};
+
+template <class T> v2::ilist<T> list<T>::ilist() const& {
+  return v2::ilist<T>(size(), data());
+}
+
+template <class T> v2::ilist<T> list<T>::ilist() && {
+  v2::ilist<T> result;
+  std::swap(result._data, _data);
+  std::swap(result._size, _size);
+  return result;
+}
+
 template <class... X> ilist(const X&... x) -> ilist<Head<X...>>;
+
+template <class T> auto tail(const ilist<T>& list) {
+  return list.slice(1);
+}
+
+template <class T, class F> auto scanr(F op, const T& x, const ilist_view<T>& l) {
+  auto result = list<T>::empty(l.size() + 1);
+
+  result[result.size() - 1] = x;
+
+  for (usize i = 1; i < result.size(); ++i) {
+    result[result.size() - i - 1] = op(l[l.size() - i], result[result.size() - i]);
+  }
+
+  return std::move(result).ilist();
+}
+
+template <class T, class F> auto foldl(F op, const T& x, const ilist_view<T>& l) {
+  auto result = x;
+
+  for (usize i = 0; i < l.size(); ++i) {
+    result = op(result, l[i]);
+  }
+
+  return result;
+}
+
+template <class T, class F> auto foldl(F op, const T& x, const ilist<T>& l) {
+  return foldl(op, x, l.slice());
+}
 
 }

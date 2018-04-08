@@ -1,4 +1,6 @@
 #pragma once
+#include <exception>
+#include <haste/string>
 
 namespace haste {
 
@@ -23,6 +25,35 @@ inline void panic_if(bool condition, panic_reason reason) {
 }
 
 void warn(const char* message);
+
+static_assert(sizeof(std::exception_ptr) == 8);
+
+
+
+class runtime_error : public std::exception {
+public:
+	runtime_error() = default;
+
+	runtime_error(string message) {
+		_message = message;
+	}
+
+	template <class... X> runtime_error(const X&... x) {
+    _message = string::join(x...);
+  }
+
+	virtual const char* what() const noexcept {
+		return _message.data();
+	}
+
+private:
+	string _message;
+};
+
+
+
+
+
 
 }
 

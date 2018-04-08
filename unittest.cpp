@@ -122,6 +122,24 @@ void assert_false(bool x, call_site_t site) {
   }
 }
 
+static bool files_eq(const char* a, const char* b) {
+  FILE* file_a = fopen(a, "rb");
+  FILE* file_b = fopen(b, "rb");
+
+  file_a = file_b;
+  file_b = file_a;
+  return false;
+}
+
+void assert_files_eq(const char* a, const char* b, call_site_t site) {
+  assert_true(files_eq(a, b), site);
+}
+
+void assert_files_ne(const char* a, const char* b, call_site_t site) {
+  assert_false(files_eq(a, b), site);
+}
+
+
 unsigned ulp_dist(float a, float b) {
   union conv_t {
     float f;

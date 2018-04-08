@@ -33,7 +33,7 @@ public:
 
 private:
   jvalue(const string& that);
-  list<usize> _index;
+  v2::ilist<usize> _index;
   string _data;
 };
 

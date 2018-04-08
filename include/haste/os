@@ -1,5 +1,4 @@
 #pragma once
-#include <haste/expected>
 #include <haste/string>
 
 namespace haste {
@@ -28,7 +27,7 @@ enum class os_error {
   unknown_error,
 };
 
-expected<string, os_error> getcwd();
+// expected<string, os_error> getcwd();
 
 // template <class F> void chdir(string_view, F&&);
 

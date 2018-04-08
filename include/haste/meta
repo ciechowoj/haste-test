@@ -1,0 +1,48 @@
+#pragma once
+#include <haste/primitive>
+
+namespace haste {
+
+namespace detail {
+
+template <class X, class... Xs>
+struct Head { using type = X; };
+
+template <class X>
+struct Head<X> { using type = X; };
+
+template <class T, class X, class... Xs>
+struct Emplace {
+  static void emplace(void* data, usize i, const X& x, const Xs&... xs) {
+    new ((T*)data + i) T(x);
+    Emplace<T, Xs...>::emplace(data, i + 1, xs...);
+  }
+};
+
+template <class T, class X>
+struct Emplace<T, X> {
+  static void emplace(void* data, usize i, const X& x) {
+    new ((T*)data + i) T(x);
+  }
+};
+
+}
+
+template <class... Xs>
+using Head = typename detail::Head<Xs...>::type;
+
+template <class X, class... Xs>
+constexpr bool Same = Same<X, Head<Xs...>> && Same<Xs...>;
+
+template <class X>
+constexpr bool Same<X> = true;
+
+template <class X>
+constexpr bool Same<X, X> = true;
+
+template <class X, class Y>
+constexpr bool Same<X, Y> = false;
+
+
+}
+

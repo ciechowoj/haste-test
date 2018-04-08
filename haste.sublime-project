@@ -28,7 +28,8 @@
 						"-s",
 						"test"
 					],
-					"name": "Test."
+					"name": "Test.",
+					"working_dir": "${project_path}"
 				},
 				{
 					"cmd":

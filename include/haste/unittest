@@ -118,9 +118,9 @@ bool run_all_tests();
 void assert_true(bool x, call_site_t = {});
 void assert_false(bool x, call_site_t = {});
 
-template <class T, bool = detail::is_fvec<T>>
+template <class T, bool = haste::detail::is_fvec<T>>
 noinline void assert_almost_eq(T a, T b, call_site_t site = {}) {
-  detail::assert_almost_eq(&a, &b, detail::vec_size<T>, detail::fvec_type<T>,
+  haste::detail::assert_almost_eq(&a, &b, haste::detail::vec_size<T>, haste::detail::fvec_type<T>,
                            site);
 }
 
@@ -133,6 +133,9 @@ template <class Ta, class Tb>
 void assert_ne(Ta a, Tb b, call_site_t site = {}) {
   assert_false(a == b, site);
 }
+
+void assert_files_eq(const char* a, const char* b, call_site_t = {});
+void assert_files_ne(const char* a, const char* b, call_site_t = {});
 
 #undef noinline
 }
