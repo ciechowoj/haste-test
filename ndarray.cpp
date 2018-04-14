@@ -116,6 +116,10 @@ void* ndarray::data() {
   return q(_impl)->data;
 }
 
+const void* ndarray::data() const {
+  return q(_impl)->data;
+}
+
 ndarray ndarray::empty(ndshape shape, ndtype dtype) {
   return empty(allocator(), shape, dtype);
 }
