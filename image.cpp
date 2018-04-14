@@ -110,4 +110,24 @@ unittest() {
   assert_eq(ilist(2, 2, 3), image.shape());
 }
 
+unittest() {
+  auto image = load_image("2x2.png");
+  auto view = image.view<u8>();
+
+  assert_eq(0, view.at(0, 0, 0));
+  assert_eq(255, view.at(0, 1, 0));
+  assert_eq(255, view.at(1, 0, 0));
+  assert_eq(0, view.at(1, 1, 0));
+
+  assert_eq(0, view.at(0, 0, 1));
+  assert_eq(255, view.at(0, 1, 1));
+  assert_eq(255, view.at(1, 0, 1));
+  assert_eq(0, view.at(1, 1, 1));
+
+  assert_eq(0, view.at(0, 0, 2));
+  assert_eq(255, view.at(0, 1, 2));
+  assert_eq(255, view.at(1, 0, 2));
+  assert_eq(0, view.at(1, 1, 2));
+}
+
 }
