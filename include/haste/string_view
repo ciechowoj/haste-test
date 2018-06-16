@@ -1,7 +1,0 @@
-#pragma once
-#include <haste/integer>
-#include <haste/primitive>
-
-namespace haste {
-
-}

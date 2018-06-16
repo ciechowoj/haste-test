@@ -1,0 +1,62 @@
+#pragma once
+
+namespace haste {
+
+struct call_site_t {
+  call_site_t(int line = __builtin_LINE(), const char* file = __builtin_FILE())
+      : line(line), file(file) {}
+
+  int line = 0;
+  const char* file = "\0";
+};
+
+namespace detail {
+
+int register_test(void (*)(), int, const char*, const char* = nullptr);
+void assert_throws(void (*)(void*), void*, call_site_t);
+
+}
+
+bool run_all_tests();
+
+#define noinline __attribute__((noinline))
+
+void assert_true(bool x, call_site_t = {});
+void assert_false(bool x, call_site_t = {});
+
+template <class F> void assert_throws(F f, call_site_t site = {}) {
+  detail::assert_throws([](void* closure) {
+    (*(F*)closure)();
+  }, &f, site);
+}
+
+template <class Ta, class Tb>
+void assert_eq(Ta a, Tb b, call_site_t site = {}) {
+  assert_true(a == b, site);
+}
+
+template <class Ta, class Tb>
+void assert_ne(Ta a, Tb b, call_site_t site = {}) {
+  assert_false(a == b, site);
+}
+
+#undef noinline
+}
+
+#define unused_hungff9q36 __attribute__((unused))
+
+#define unittest_1oxgaer4ai(ln, uq) uq##ln
+
+#define unittest_9w3krm934b(ln, uq, fl, ...)                               \
+  namespace {                                                              \
+  struct unittest_1oxgaer4ai(ln, uq) {                                     \
+    static void run();                                                     \
+  };                                                                       \
+  }                                                                        \
+  unused_hungff9q36 static const int unittest_1oxgaer4ai(ln, uq##_t) =     \
+      ::haste::detail::register_test(unittest_1oxgaer4ai(ln, uq)::run, ln, \
+                                     fl, __VA_ARGS__);                     \
+  void unittest_1oxgaer4ai(ln, uq)::run()
+
+#define unittest(...) \
+  unittest_9w3krm934b(__LINE__, unittest_sgv1fsnhkn, __FILE__, __FILE__ __VA_ARGS__)

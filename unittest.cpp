@@ -1,15 +1,18 @@
-#include <cfloat>
-#include <cmath>
 #include <cstdio>
 #include <cstdlib>
-
-#include <haste/unittest>
+#include <haste/test>
 #include <new>
 
 namespace haste {
 namespace detail {}
 
 using ulong_t = unsigned long long;
+
+struct test_t {
+  void (*callback)();
+  int line;
+  const char* file;
+};
 
 struct context_t {
   ulong_t num_failed = 0;
@@ -27,7 +30,6 @@ struct trigger_t {
 
   trigger_t& enlist(void (*)(), int, const char*);
 
-  using test_t = void (*)();
   test_t* _tests = nullptr;
   ulong_t _capacity = 0;
   ulong_t _size = 0;
@@ -48,15 +50,15 @@ context_t* context_instance() { return instance().context; }
 
 namespace detail {
 
-int register_test(void (*test)(), int line, const char* file, const char*) {
-  instance().enlist(test, line, file);
+int register_test(void (*callback)(), int line, const char* file, const char*) {
+  instance().enlist(callback, line, file);
   return -1;
 }
 }
 
 trigger_t::~trigger_t() { delete[] _tests; }
 
-trigger_t& trigger_t::enlist(void (*test)(), int, const char*) {
+trigger_t& trigger_t::enlist(void (*callback)(), int line, const char* file) {
   if (_size == _capacity) {
     auto capacity = _capacity * 2;
     capacity = capacity < 16 ? 16 : capacity;
@@ -73,7 +75,10 @@ trigger_t& trigger_t::enlist(void (*test)(), int, const char*) {
     _capacity = capacity;
   }
 
-  _tests[_size] = test;
+  _tests[_size].callback = callback;
+  _tests[_size].line = line;
+  _tests[_size].file = file;
+
   ++_size;
 
   return *this;
@@ -89,7 +94,32 @@ bool run_all_tests() {
 
   for (ulong_t i = 0; i < trigger._size; ++i) {
     context.reset();
-    trigger._tests[i]();
+
+    try {
+      trigger._tests[i].callback();
+    }
+    catch (const std::exception& exception) {
+      std::printf(
+        "%s:%d: uncaught std::exception; what: %s\n",
+        trigger._tests[i].file,
+        trigger._tests[i].line,
+        exception.what());
+
+      std::fflush(stdout);
+
+      context_instance()->assert_failed();
+    }
+    catch (...) {
+      std::printf(
+        "%s:%d: uncaught exception\n",
+        trigger._tests[i].file,
+        trigger._tests[i].line);
+
+      std::fflush(stdout);
+
+      context_instance()->assert_failed();
+    }
+
     if (!context.passed) {
       ++context.num_failed;
     }
@@ -122,93 +152,22 @@ void assert_false(bool x, call_site_t site) {
   }
 }
 
-static bool files_eq(const char* a, const char* b) {
-  FILE* file_a = fopen(a, "rb");
-  FILE* file_b = fopen(b, "rb");
-
-  file_a = file_b;
-  file_b = file_a;
-  return false;
-}
-
-void assert_files_eq(const char* a, const char* b, call_site_t site) {
-  assert_true(files_eq(a, b), site);
-}
-
-void assert_files_ne(const char* a, const char* b, call_site_t site) {
-  assert_false(files_eq(a, b), site);
-}
-
-
-unsigned ulp_dist(float a, float b) {
-  union conv_t {
-    float f;
-    int i;
-    static_assert(sizeof(int) == sizeof(float), "");
-  };
-
-  conv_t ca, cb;
-  ca.f = a;
-  cb.f = b;
-
-  if ((ca.i < 0) != (cb.i < 0)) {
-    return unsigned(std::abs(ca.i & ~(1 << 31))) +
-           unsigned(std::abs(cb.i & ~(1 << 31)));
-  } else {
-    return std::abs(ca.i - cb.i);
-  }
-}
-
-bool almost_eq(float a, float b) {
-  return std::fabs(a - b) < FLT_EPSILON || ulp_dist(a, b) < 64;
-}
-
-unittest() {
-  assert_true(ulp_dist(0.0f, -0.0f) == 0);
-  assert_true(ulp_dist(1.0000001f, 1.0000002f) != 0);
-  assert_false(almost_eq(1.0f, -1.0f));
-  assert_true(almost_eq(1.0f, 1.0f));
-}
-
-void print_vector(float* v, int s) {
-  if (s == 1) {
-    std::printf("%f", v[0]);
-  } else {
-    std::printf("[%f", v[0]);
-
-    for (int i = 1; i < s; ++i) {
-      std::printf(", %f", v[i]);
-    }
-
-    std::printf("]");
-  }
-}
-
 namespace detail {
 
-void assert_almost_eq(void* a, void* b, int size, int type, call_site_t site) {
-  if (type == 0) {
-    auto fa = reinterpret_cast<float*>(a);
-    auto fb = reinterpret_cast<float*>(b);
+void assert_throws(void (*callback)(void*), void* closure, call_site_t site) {
+  bool throws = false;
 
-    for (int i = 0; i < size; ++i) {
-      if (!almost_eq(fa[i], fb[i])) {
-        std::printf("%s:%u: assert_almost_eq(", site.file, site.line);
-
-        print_vector(fa, size);
-        std::printf(", ");
-        print_vector(fb, size);
-        std::printf(") failed\n");
-
-        context_instance()->assert_failed();
-
-        return;
-      }
-    }
-  } else if (type == 1) {
-  } else {
-    // not gonna happen
+  try
+  {
+    callback(closure);
   }
+  catch (...)
+  {
+    throws = true;
+  }
+
+  assert_true(throws, site);
 }
+
 }
 }
