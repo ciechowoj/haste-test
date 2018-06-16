@@ -47,9 +47,3 @@ build/test.bin: build/libhaste-test.a build/test.o Makefile
 	$(CXX) -g build/test.o -Lbuild -lhaste-test -ldw -o build/test.bin
 
 -include $(OBJECT_FILES:build/%.o=build/%.d)
-
-
-
-
-
-
