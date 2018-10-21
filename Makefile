@@ -7,7 +7,7 @@ INCLUDE_DIRS = -Iinclude -Ibackward-cpp
 CXXFLAGS := $(CXXFLAGS) $(INCLUDE_DIRS)
 
 SOURCE_FILES = $(wildcard *.cpp)
-SOURCE_FILES := $(filter-out test.cpp, $(SOURCE_FILES))
+SOURCE_FILES := $(filter-out unittest.cpp, $(SOURCE_FILES))
 HEADER_FILES = $(wildcard include/haste/*)
 OBJECT_FILES = $(SOURCE_FILES:%.cpp=build/%.o)
 

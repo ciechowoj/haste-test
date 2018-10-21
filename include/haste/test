@@ -1,4 +1,5 @@
 #pragma once
+#include <string>
 
 namespace haste {
 
@@ -39,6 +40,8 @@ template <class Ta, class Tb>
 void assert_ne(Ta a, Tb b, call_site_t site = {}) {
   assert_false(a == b, site);
 }
+
+void assert_almost_eq(const std::string& a, const std::string& b, call_site_t site = {});
 
 #undef noinline
 }

@@ -1,5 +1,6 @@
 #include <cstdio>
 #include <cstdlib>
+#include <cctype>
 #include <haste/test>
 #include <new>
 
@@ -150,6 +151,25 @@ void assert_false(bool x, call_site_t site) {
 
     context_instance()->assert_failed();
   }
+}
+
+void assert_almost_eq(const std::string& a, const std::string& b, call_site_t site) {
+  auto a_itr = a.begin();
+  auto a_end = a.end();
+  auto b_itr = b.begin();
+  auto b_end = b.end();
+
+  do {
+    while (a_itr != a_end && std::isspace(*a_itr)) {
+      ++a_itr;
+    }
+
+    while (b_itr != b_end && std::isspace(*b_itr)) {
+      ++b_itr;
+    }
+  } while(a_itr != a_end && b_itr != b_end && *a_itr++ == *b_itr++);
+
+  assert_true(a_itr == a_end && b_itr == b_end, site);
 }
 
 namespace detail {
